@@ -1,0 +1,7 @@
+name = "moonreader-monitor"
+main = "src/index.js"
+compatibility_date = "2024-02-20"
+
+# 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
+[triggers]
+crons = ["0 * * * *"]

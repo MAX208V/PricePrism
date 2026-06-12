@@ -19,27 +19,25 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     const score = s.scoreText || "";
     const installs = s.installs || "";
 
-    // 组装头部，有图标时显示
-    let headHtml = '<div class="ach">';
+    let head = '<div class="ach">';
     if (icon) {
-      headHtml += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';
+      head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';
     }
-    headHtml += '<div class="acn"><div class="act">' + esc(a.name) + '</div><div class="aci">' + esc(a.id) + '</div></div>'
+    head += '<div class="acn"><div class="act">' + esc(a.name) + '</div><div class="aci">' + esc(a.id) + '</div></div>'
       + '<span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
 
-    // 评分和安装量（如果有）
-    let extraRow = "";
+    let extra = "";
     if (score || installs) {
-      extraRow = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">'
+      extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">'
         + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "")
         + (installs ? '<span style="color:var(--m)">|</span> ' + esc(installs) : "")
         + '</div></div>';
     }
 
-    cards += '<div class="ac">' + headHtml
+    cards += '<div class="ac">' + head
       + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div>'
       + '<div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>'
-      + extraRow
+      + extra
       + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div>'
       + '<div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div>'
       + '</div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ')"><span class="mat">edit</span></button>'
@@ -62,19 +60,20 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:auto;padding:0 var(--sxl);flex-shrink:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
     : "";
 
-  const script = [
-    'var tt=document.getElementById("tt"),ttm,edId=null;',
-    'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
-    'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
-    'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
-    'function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}',
-    'function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}',
-    'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
-    'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
-    'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
-    'async function doSearch(){var t=document.getElementById("searchTerm").value.trim();if(!t){show("请输入关键词");return}var el=document.getElementById("searchResults");el.innerHTML="<div class=\'ld\'>搜索中...</div>";try{var d=await api("/api/search?term="+encodeURIComponent(t));if(!d.results||d.results.length===0){el.innerHTML="<div class=\'ld\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i],ic=r.icon||"",pr=r.priceText||(r.free?"免费":""),id=r.appId||"",tl=r.title||"",dv=r.developer||"";h+="<div class=\'sri\' onclick=\'fillApp(\\""+id.replace(/"/g,"&quot;")+"\\",\\""+tl.replace(/"/g,"&quot;")+"\\")\'><img src=\'"+ic+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'><div class=\'srd\'><div class=\'srn\'>"+tl+"</div><div class=\'sra\'>"+id+" \\u00b7 "+dv+"</div></div><div class=\'srp\'>"+pr+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div class=\'ld\'>搜索失败</div>"}}',
-    'function fillApp(id,name){document.querySelector(\'input[name="app_id"]\').value=id;document.querySelector(\'input[name="name"]\').value=name;document.getElementById("searchResults").innerHTML="<div class=\'ld\' style=\'color:var(--pos)\'>已选择："+name+"</div>";document.getElementById("searchTerm").value=""}',
-  ].join("");
+  // 构建前端 script - 用数组分段，避免复杂转义
+  var s = [];
+  s.push('var tt=document.getElementById("tt"),ttm,edId=null;');
+  s.push('function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}');
+  s.push('async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}');
+  s.push('function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}');
+  s.push('function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}');
+  s.push('function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}');
+  s.push('function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}');
+  s.push('function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}');
+  s.push('function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}');
+  s.push('async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'pickApp(\\""+r.appId+"\\",\\""+r.title.replace(/"/g,"&quot;")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}');
+  s.push('function pickApp(id,name){document.querySelector(\'input[name="app_id"]\').value=id;document.querySelector(\'input[name="name"]\').value=name;document.getElementById("searchResults").innerHTML="<div style=\'text-align:center;padding:20px;color:var(--pos);font-weight:500\'>已选择: "+name+"</div>";document.getElementById("searchTerm").value=""}');
+  var script = s.join("");
 
   return '<!DOCTYPE html><html lang="zh-CN"><head>'
     + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">'

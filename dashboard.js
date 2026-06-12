@@ -57,14 +57,14 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>'
     : "";
   const searchBox = hasProxy
-    ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:auto;padding:0 var(--sxl);flex-shrink:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
+    ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
     : "";
 
   var parts = [];
   parts.push('var tt=document.getElementById("tt"),ttm,edId=null;');
   parts.push('function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}');
   parts.push('async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}');
-  parts.push('function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}');
+  parts.push('function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}');
   parts.push('function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}');
   parts.push('function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}');
   parts.push('function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}');
@@ -89,6 +89,9 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.brd-i .mat{font-size:20px}'
     + 'h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}'
     + '.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}'
+    + '.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}'
+    + '.sc-h .mat{font-size:22px;color:var(--p)}'
+    + '.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}'
     + '.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}'
     + '.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}'
     + '.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}'
@@ -109,7 +112,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.bs:hover{background:var(--pp);color:#163300}'
     + '.bs .mat{font-size:18px}'
     + '.bs.br .mat{color:var(--neg)}'
-    + '.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;padding:var(--sm) var(--sxl);border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}'
+    + '.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}'
     + '.bp:hover{background:var(--pa)}'
     + '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}'
     + '.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}'
@@ -123,7 +126,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
     + '.hp{font-weight:700;font-variant-numeric:tabular-nums}'
     + '.hb{padding:2px 10px;font-size:10px}'
-    + '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}'
+    + '.w{background:#fff3cd;color:#856404;border-radius(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}'
     + '.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}'
     + '.tt.s{opacity:1}'
     + '.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}'
@@ -149,11 +152,10 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + searchBox
     + '<div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>'
     + noApps
-    + '<div class="cd"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">添加应用</h2>'
+    + '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>'
     + '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">'
     + '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>'
-    + '<div><div class="lb">显示名称</div><input class="in" name="name" placeholder="Moon+ Reader Pro" required></div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>'
+    + '<div><div class="lb">显示名称 <span stylecolor:var(--m);font-weight:400;获取   ss="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>'
     + '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>'
     + '<div class="cd"><div class="sh"><h2>通知记录</h2></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>') + '</div>'
     + '<div class="ft">Cloudflare Workers \u00b7 Wise Design</div></div>'

@@ -15,7 +15,35 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     const ts = fmtUTC(s.last_checked_at);
     const ns = fmtUTC(s.last_notified_at);
     const lo = p !== undefined && p > 0 && p < a.threshold;
-    cards += '<div class="ac"><div class="ach"><div class="acn"><div class="act">' + esc(a.name) + '</div><div class="aci">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div><div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div><div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+    const icon = s.icon || "";
+    const score = s.scoreText || "";
+    const installs = s.installs || "";
+
+    // 组装头部，有图标时显示
+    let headHtml = '<div class="ach">';
+    if (icon) {
+      headHtml += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';
+    }
+    headHtml += '<div class="acn"><div class="act">' + esc(a.name) + '</div><div class="aci">' + esc(a.id) + '</div></div>'
+      + '<span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+
+    // 评分和安装量（如果有）
+    let extraRow = "";
+    if (score || installs) {
+      extraRow = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">'
+        + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "")
+        + (installs ? '<span style="color:var(--m)">|</span> ' + esc(installs) : "")
+        + '</div></div>';
+    }
+
+    cards += '<div class="ac">' + headHtml
+      + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div>'
+      + '<div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>'
+      + extraRow
+      + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div>'
+      + '<div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div>'
+      + '</div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ')"><span class="mat">edit</span></button>'
+      + '<button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
   }
 
   let hr = "";
@@ -44,7 +72,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
     'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
     'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
-    'async function doSearch(){var t=document.getElementById("searchTerm").value.trim();if(!t){show("请输入关键词");return}var el=document.getElementById("searchResults");el.innerHTML="<div class=\'ld\'>搜索中...</div>";try{var d=await api("/api/search?term="+encodeURIComponent(t));if(!d.results||d.results.length===0){el.innerHTML="<div class=\'ld\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i],ic=r.icon||"",pr=r.priceText||(r.free?"免费":""),id=r.appId||"",tl=r.title||"",dv=r.developer||"";h+="<div class=\'sri\' onclick=\'fillApp(\\""+id.replace(/"/g,"&quot;")+"\\",\\""+tl.replace(/"/g,"&quot;")+"\\")\'><img src=\'"+ic+"\' alt=\'\' onerror=\'this.style.display=\\\"none\\\"\'><div class=\'srd\'><div class=\'srn\'>"+tl+"</div><div class=\'sra\'>"+id+" \\u00b7 "+dv+"</div></div><div class=\'srp\'>"+pr+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div class=\'ld\'>搜索失败</div>"}}',
+    'async function doSearch(){var t=document.getElementById("searchTerm").value.trim();if(!t){show("请输入关键词");return}var el=document.getElementById("searchResults");el.innerHTML="<div class=\'ld\'>搜索中...</div>";try{var d=await api("/api/search?term="+encodeURIComponent(t));if(!d.results||d.results.length===0){el.innerHTML="<div class=\'ld\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i],ic=r.icon||"",pr=r.priceText||(r.free?"免费":""),id=r.appId||"",tl=r.title||"",dv=r.developer||"";h+="<div class=\'sri\' onclick=\'fillApp(\\""+id.replace(/"/g,"&quot;")+"\\",\\""+tl.replace(/"/g,"&quot;")+"\\")\'><img src=\'"+ic+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'><div class=\'srd\'><div class=\'srn\'>"+tl+"</div><div class=\'sra\'>"+id+" \\u00b7 "+dv+"</div></div><div class=\'srp\'>"+pr+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div class=\'ld\'>搜索失败</div>"}}',
     'function fillApp(id,name){document.querySelector(\'input[name="app_id"]\').value=id;document.querySelector(\'input[name="name"]\').value=name;document.getElementById("searchResults").innerHTML="<div class=\'ld\' style=\'color:var(--pos)\'>已选择："+name+"</div>";document.getElementById("searchTerm").value=""}',
   ].join("");
 
@@ -64,8 +92,9 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + 'h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}'
     + '.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}'
     + '.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}'
-    + '.ach{display:flex;align-items:center;justify-content:space-between;padding:var(--sl) var(--sl) var(--ss)}'
-    + '.acn{display:flex;flex-direction:column;gap:2px;min-width:0}'
+    + '.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}'
+    + '.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}'
+    + '.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}'
     + '.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
     + '.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}'
     + '.acb{padding:0 var(--sl) var(--sl)}'
@@ -76,6 +105,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}'
     + '.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}'
     + '.v.gr{color:var(--pos)}'
+    + '.star{color:#fbbc04}'
     + '.ar{display:flex;gap:var(--ss)}'
     + '.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}'
     + '.bs:hover{background:var(--pp);color:#163300}'

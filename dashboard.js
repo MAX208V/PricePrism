@@ -6,7 +6,7 @@ function fmtUTC(iso) {
   return d.toLocaleString("zh-CN", { timeZone: "UTC", hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) + " UTC";
 }
 
-export function renderHtml(apps, history, hasSc3) {
+export function renderHtml(apps, history, hasSc3, hasProxy) {
   let cards = "";
   for (const a of apps) {
     const s = a.status || {};
@@ -26,6 +26,15 @@ export function renderHtml(apps, history, hasSc3) {
 
   const noApps = apps.length === 0 ? `<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>` : cards;
   const warn = !hasSc3 ? `<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>` : "";
+  const searchBox = hasProxy ? `
+<div class="cd" id="searchSection">
+  <h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2>
+  <div style="display:flex;gap:var(--ss)">
+    <input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch()}">
+    <button class="bp" onclick="doSearch()" style="width:auto;padding:0 var(--sxl);flex-shrink:0"><span class="mat">search</span></button>
+  </div>
+  <div id="searchResults"></div>
+</div>` : "";
 
   return `<!DOCTYPE html><html lang="zh-CN"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -86,9 +95,19 @@ h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}
 .ov.s{display:flex}
 .md{background:var(--c);border-radius:var(--rx);width:100%;max-width:400px;padding:var(--sxl);box-shadow:0 8px 40px rgba(14,15,12,.12)}
 .md h2{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-bottom:var(--sm)}
+.sr{margin-top:var(--sm);display:flex;flex-direction:column;gap:var(--ss)}
+.sri{display:flex;align-items:center;gap:var(--sm);background:var(--s);border-radius:var(--rm);padding:var(--sm);cursor:pointer;transition:background .15s}
+.sri:hover{background:var(--pp)}
+.sri img{width:40px;height:40px;border-radius:8px;flex-shrink:0}
+.sri .srd{flex:1;min-width:0}
+.sri .srd .srn{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sri .srd .sra{font-size:11px;color:var(--m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sri .srp{font-size:13px;font-weight:600;color:var(--pos);white-space:nowrap}
+.sr .ld{text-align:center;padding:20px;color:var(--m);font-size:13px;font-weight:500}
 </style></head><body><div class="wr">
 <div class="brd"><div class="brd-i"><span class="mat">monitoring</span></div><div><h1>Price Monitor</h1><div class="sb">极简 · 智能 · 省心</div></div></div>
 ${warn}
+${searchBox}
 <div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>
 ${noApps}
 <div class="cd"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">添加应用</h2>
@@ -126,6 +145,35 @@ function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;docu
 function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}
 function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}
 function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}
+
+// 搜索功能
+async function doSearch() {
+  var term=document.getElementById("searchTerm").value.trim();
+  if(!term){show("请输入关键词");return}
+  var el=document.getElementById("searchResults");
+  el.innerHTML='<div class="ld"><span class="sp"></span> 搜索中...</div>';
+  try {
+    var d=await api("/api/search?term="+encodeURIComponent(term));
+    if(!d.results||d.results.length===0){el.innerHTML='<div class="ld">未找到结果</div>';return}
+    var h="";
+    for(var i=0;i<d.results.length;i++){
+      var r=d.results[i];
+      var icon=r.icon||"";
+      var price=r.priceText||(r.free?"免费":"");
+      var id=esc(r.appId||"");
+      var title=esc(r.title||"");
+      var dev=esc(r.developer||"");
+      h+='<div class="sri" onclick="fillApp(\''+id+'\',\''+title+'\')"><img src="'+icon+'" alt="" onerror="this.style.display=\'none\'"><div class="srd"><div class="srn">'+title+'</div><div class="sra">'+id+' · '+dev+'</div></div><div class="srp">'+esc(price)+'</div></div>';
+    }
+    el.innerHTML='<div class="sr">'+h+'</div>';
+  } catch(e){el.innerHTML='<div class="ld">搜索失败</div>'}
+}
+function fillApp(id,name){
+  document.querySelector('input[name="app_id"]').value=id;
+  document.querySelector('input[name="name"]').value=name;
+  document.getElementById("searchResults").innerHTML='<div class="ld">✅ 已选择：'+esc(name)+'</div>';
+  document.getElementById("searchTerm").value="";
+}
 <\/script></body></html>`;
 }
 

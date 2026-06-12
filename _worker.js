@@ -44,35 +44,44 @@ async function handleAppsApi(request, env) {
   }
   if (request.method === "POST") {
     const body = await request.json();
-    if (!body.app_id || !body.name) return jsonResponse({ error: "app_id and name required" }, 400);
+    if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
+
+    let name = body.name || "";
+    const country = body.country || DEFAULT_COUNTRY;
+    const lang = body.lang || DEFAULT_LANG;
+
     const apps = await getApps(env);
     if (apps.find(a => a.id === body.app_id)) return jsonResponse({ error: "App already exists" }, 409);
 
-    const country = body.country || DEFAULT_COUNTRY;
-    const lang = body.lang || DEFAULT_LANG;
-    const appConfig = { id: body.app_id, name: body.name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
+    // 先获取应用信息，尝试取 title 作为名称
+    let info = null;
+    try {
+      info = await fetchAppInfo(env, body.app_id, country, lang);
+    } catch (e) {}
+
+    if (!name && info && info.title) {
+      name = info.title;
+    }
+    if (!name) name = body.app_id; // 实在没名称就用 app_id
+
+    const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
     apps.push(appConfig);
     await env.KV.put("config:apps", JSON.stringify(apps));
 
-    // 添加后立即获取一次应用信息
-    try {
-      const info = await fetchAppInfo(env, body.app_id, country, lang);
-      if (info) {
-        const statusKey = "status:" + body.app_id;
-        const st = await env.KV.get(statusKey, "json") || {};
-        st.last_checked_price = info.price;
-        st.last_checked_at = new Date().toISOString();
-        st.icon = info.icon;
-        st.score = info.score;
-        st.scoreText = info.scoreText;
-        st.installs = info.installs;
-        await env.KV.put(statusKey, JSON.stringify(st));
-      }
-    } catch (e) {
-      // 静默失败，不影响添加
+    // 存入获取到的信息
+    if (info) {
+      const statusKey = "status:" + body.app_id;
+      const st = await env.KV.get(statusKey, "json") || {};
+      st.last_checked_price = info.price;
+      st.last_checked_at = new Date().toISOString();
+      st.icon = info.icon;
+      st.score = info.score;
+      st.scoreText = info.scoreText;
+      st.installs = info.installs;
+      await env.KV.put(statusKey, JSON.stringify(st));
     }
 
-    return jsonResponse({ ok: true });
+    return jsonResponse({ ok: true, name });
   }
   if (request.method === "DELETE") {
     const body = await request.json();
@@ -131,22 +140,22 @@ async function fetchAppInfo(env, appId, country, lang) {
   const proxy = env.SCRAPER_PROXY;
   if (proxy) {
     try {
-      const resp = await fetch(proxy + "?method=app&appId=" + appId + "&country=" + country + "&lang=" + lang, { headers: { Accept: "application/json" } });
+      const resp = await fetch(proxy + "?method=app&appId=" + appId + "&country=" + country + "&lang=" + lang);
       const data = await resp.json();
       if (data.ok && data.data) {
         return {
           price: data.data.price,
           currency: data.data.currency || "USD",
           icon: data.data.icon,
+          title: data.data.title,
           score: data.data.score,
           scoreText: data.data.scoreText,
           installs: data.data.installs,
         };
       }
-    } catch (e) { /* fallback */ }
+    } catch (e) {}
   }
-  // 降级到 price 接口，只能获取价格
-  const fallbackResp = await fetch((env.SCRAPER_API || SCRAPER_API_DEFAULT) + "?id=" + appId + "&country=" + country + "&lang=" + lang, { headers: { Accept: "application/json" } });
+  const fallbackResp = await fetch((env.SCRAPER_API || SCRAPER_API_DEFAULT) + "?id=" + appId + "&country=" + country + "&lang=" + lang);
   if (fallbackResp.ok) {
     const data = await fallbackResp.json();
     return { price: data.price, currency: data.currency || "USD" };

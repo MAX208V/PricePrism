@@ -45,11 +45,10 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       var head = '<div class="ach">';
       if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
       head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
-      head += '<div class="aci">';
-      if (dev) { head += esc(dev) + ' | '; }
-      head += esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
-      var extra = '<div class="gi" style="grid-column:1/3"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--ss)"><div><div class="gl">评分 / 心愿单</div><div class="v">' + (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (ratings ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(ratings) : "") + '</div></div>' + (note ? '<div style="text-align:right;flex-shrink:0;max-width:50%"><div class="gl">备注</div><div class="v" style="font-size:12px;color:#856404">' + esc(note) + '</div></div>' : '') + '</div></div>';
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'" + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+      if (dev) { head += '<div class="aci">' + esc(dev) + '</div>'; }
+      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+      var extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (ratings ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(ratings) : "") + '</div></div>';
+      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div>' + (note ? '<div class="v" style="font-size:11px;color:#856404;margin-top:4px">' + esc(note) + '</div>' : '') + '</div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'" + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
     }
     var hr = "";
     for (var j = 0; j < history.length; j++) {
@@ -278,7 +277,7 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   if (notified) {
     const nr = await sendSc3(sc3Uid, sc3Sendkey, name + " 降价啦！", "**" + price + " " + cur + "**，已低于阈值 " + threshold + " " + cur + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + "&hl=" + lang + "&gl=" + country + ")");
     status.last_notified_price = price; status.last_notified_at = new Date().toISOString();
-    await appendHistory(env, { app_id: id, name, price, threshold, time: new Date().toISOString(), notified: true });
+    await appendHistory new Date().toISOString(), notified: true });
     await env.KV.put(statusKey, JSON.stringify(status));
     return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, ratings, developer, sc3: nr };
   }

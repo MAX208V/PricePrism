@@ -25,6 +25,7 @@ export default {
     }
     if (path === "/api/history") return handleHistory(env);
     if (path === "/api/status") return handleStatus(env);
+    if (path === "/api/search") return handleSearch(request, env);
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
     return handleDashboard(env);
   },
@@ -84,6 +85,22 @@ async function handleStatus(env) {
     result.push({ ...app, status: st });
   }
   return jsonResponse(result);
+}
+
+// ==================== 搜索（通过 proxy） ====================
+async function handleSearch(request, env) {
+  const term = new URL(request.url).searchParams.get("term");
+  if (!term) return jsonResponse({ error: "term required" }, 400);
+  const proxy = env.SCRAPER_PROXY;
+  if (!proxy) return jsonResponse({ error: "SCRAPER_PROXY not configured" }, 400);
+  try {
+    const resp = await fetch(proxy + "?method=search&term=" + encodeURIComponent(term) + "&num=10", { headers: { Accept: "application/json" } });
+    const data = await resp.json();
+    if (!data.ok) return jsonResponse({ error: data.error || "search failed" }, 500);
+    return jsonResponse({ ok: true, results: data.data });
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 500);
+  }
 }
 
 // ==================== 核心监控 ====================
@@ -166,5 +183,5 @@ async function handleDashboard(env) {
     list.push({ ...app, status: st });
   }
   const history = await env.KV.get("history", "json") || [];
-  return new Response(renderHtml(list, history, !!(env.SC3_UID && env.SC3_SENDKEY)), { headers: { "Content-Type": "text/html;charset=utf-8" } });
+  return new Response(renderHtml(list, history, !!(env.SC3_UID && env.SC3_SENDKEY), !!(env.SCRAPER_PROXY)), { headers: { "Content-Type": "text/html;charset=utf-8" } });
 }

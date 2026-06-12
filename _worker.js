@@ -143,7 +143,7 @@ async function handleAppsApi(request, env) {
     if (apps.find(a => a.id === body.app_id)) return jsonResponse({ error: "App already exists" }, 409);
     let info = null;
     try { info = await fetchAppInfo(env, body.app_id, country, lang); } catch (e) {}
- if (!name && info &&.title;
+    if (!name && info && info.title) name = info.title;
     if (!name) name = body.app_id;
     const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
     apps.push(appConfig);

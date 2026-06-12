@@ -7,59 +7,51 @@ function fmtUTC(iso) {
 }
 
 export function renderHtml(apps, history, hasSc3, hasProxy) {
-  let cards = "";
-  for (const a of apps) {
-    const st = a.status || {};
-    const p = st.last_checked_price;
-    const ps = p !== undefined ? "$" + p : "-";
-    const ts = fmtUTC(st.last_checked_at);
-    const ns = fmtUTC(st.last_notified_at);
-    const lo = p !== undefined && p > 0 && p < a.threshold;
-    const icon = st.icon || "";
-    const score = st.scoreText || "";
-    const installs = st.installs || "";
+  var cards = "";
+  for (var i = 0; i < apps.length; i++) {
+    var a = apps[i];
+    var st = a.status || {};
+    var p = st.last_checked_price;
+    var ps = p !== undefined ? "$" + p : "-";
+    var ts = fmtUTC(st.last_checked_at);
+    var ns = fmtUTC(st.last_notified_at);
+    var lo = p !== undefined && p > 0 && p < a.threshold;
+    var icon = st.icon || "";
+    var score = st.scoreText || "";
+    var installs = st.installs || "";
+    var note = a.note || "";
 
-    let head = '<div class="ach">';
+    var head = '<div class="ach">';
     if (icon) {
       head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';
     }
-    head += '<div class="acn"><div class="act">' + esc(a.name) + '</div><div class="aci">' + esc(a.id) + '</div></div>'
-      + '<span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+    head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
+    if (note) {
+      head += '<div class="acnote">' + esc(note) + '</div>';
+    }
+    head += '<div class="aci">' + esc(a.id) + '</div></div>';
+    head += '<span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
 
-    let extra = "";
+    var extra = "";
     if (score || installs) {
-      extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">'
-        + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "")
-        + (installs ? '<span style="color:var(--m)">|</span> ' + esc(installs) : "")
-        + '</div></div>';
+      extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">' + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "") + (installs ? '<span style="color:var(--m)">|</span> ' + esc(installs) : "") + '</div></div>';
     }
 
-    cards += '<div class="ac">' + head
-      + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div>'
-      + '<div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>'
-      + extra
-      + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div>'
-      + '<div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div>'
-      + '</div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ')"><span class="mat">edit</span></button>'
-      + '<button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+    cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'" + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
   }
 
-  let hr = "";
-  for (const h of history) {
-    const t = fmtUTC(h.time);
+  var hr = "";
+  for (var j = 0; j < history.length; j++) {
+    var h = history[j];
+    var t = fmtUTC(h.time);
     hr += '<div class="hr"><span class="ht">' + t + '</span><span class="hn">' + esc(h.name) + '</span><span class="hp">$' + h.price + '</span><span class="bg hb' + (h.notified ? "" : " gy") + '">' + (h.notified ? "已通知" : "跳过") + '</span></div>';
   }
 
-  const noApps = apps.length === 0
-    ? '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>'
-    : cards;
-  const warn = !hasSc3
-    ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>'
-    : "";
-  const searchBox = hasProxy
-    ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
-    : "";
+  var noApps = apps.length === 0 ? '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>' : cards;
+  var warn = !hasSc3 ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>' : "";
+  var searchBox = hasProxy ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px"><span class="mat">search</span></button></div><div id="searchResults"></div></div>' : "";
 
+  // 添加表单
   var formHtml = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
   formHtml += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
   formHtml += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
@@ -70,27 +62,33 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
   formHtml += '</div></div>';
   formHtml += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
 
-  var parts = [];
-  parts.push('var tt=document.getElementById("tt"),ttm,edId=null;');
-  parts.push('function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}');
-  parts.push('async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}');
-  parts.push('function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}');
-  parts.push('function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}');
-  parts.push('function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}');
-  parts.push('function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}');
-  parts.push('function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}');
-  parts.push('function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}');
-  parts.push('async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'pickApp(\\""+r.appId+"\\",\\""+r.title.replace(/"/g,"&quot;")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}');
-  parts.push('function pickApp(id,name){document.querySelector(\'input[name="app_id"]\').value=id;document.querySelector(\'input[name="name"]\').value=name;document.getElementById("searchResults").innerHTML="<div style=\'text-align:center;padding:20px;color:var(--pos);font-weight:500\'>已选择: "+name+"</div>";document.getElementById("searchTerm").value=""}');
-  var script = parts.join("");
+  // 详情弹窗 + 编辑弹窗
+  var detailModal = '<div id="dv" class="ov"><div class="md" id="detailMd"><div id="detailContent"></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeDetail()" style="flex:1;width:auto;padding:0 var(--sxl)">返回</button><button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="flex:1">添加监控</button></div></div></div>';
+  var editModal = '<div id="ov" class="ov"><div class="md"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button><button class="bp" onclick="saveEdit()" style="flex:1">保存</button></div></div></div>';
+
+  var script = [
+    'var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;',
+    'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
+    'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
+    'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
+    'function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}',
+    'function editApp(id,n,c,t,nt){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("ov").classList.add("s")}',
+    'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
+    'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c};if(nt){b.note=nt}api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
+    'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
+    'async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\\""+r.appId+"\\",\\""+escJs(r.title)+"\\",\\""+escJs(r.icon||"")+"\\",\\""+escJs(r.priceText||(r.free?"免费":""))+"\\",\\""+escJs(r.developer||"")+"\\",\\""+escJs(r.scoreText||"")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}',
+    'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\'").replace(/"/g,"&quot;")}',
+    'function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--sm)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:48px;height:48px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div><div style=\'font-size:18px;font-weight:700\'>"+title+"</div><div style=\'font-size:12px;color:var(--m);margin-top:2px\'>"+id+"</div></div></div>";h+="<div class=\'g\'>";h+="<div class=\'gi\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'star\'>\u2605</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}',
+    'function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}',
+    'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:6,country:"us"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',
+  ].join("");
 
   return '<!DOCTYPE html><html lang="zh-CN"><head>'
     + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">'
     + '<title>Price Monitor</title>'
     + '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">'
     + '<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">'
-    + '<style>'
-    + ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--f:Inter,sans-serif}'
+    + '<style>:root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--f:Inter,sans-serif}'
     + '*{margin:0;padding:0;box-sizing:border-box}'
     + 'body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}'
     + '.wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}'
@@ -107,6 +105,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}'
     + '.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}'
     + '.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+    + '.acnote{font-size:11px;color:#856404;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
     + '.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}'
     + '.acb{padding:0 var(--sl) var(--sl)}'
     + '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}'
@@ -124,6 +123,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.bs.br .mat{color:var(--neg)}'
     + '.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}'
     + '.bp:hover{background:var(--pa)}'
+    + '.bp:disabled{opacity:0.5;cursor:default}'
     + '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}'
     + '.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}'
     + '.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}'
@@ -158,14 +158,12 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.sri .srp{font-size:13px;font-weight:600;color:var(--pos);white-space:nowrap}'
     + '</style></head><body><div class="wr">'
     + '<div class="brd"><div class="brd-i"><span class="mat">monitoring</span></div><div><h1>Price Monitor</h1><div class="sb">极简 \u00b7 智能 \u00b7 省心</div></div></div>'
-    + warn
-    + searchBox
+    + warn + searchBox
     + '<div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>'
-    + noApps
-    + formHtml
+    + noApps + formHtml
     + '<div class="cd"><div class="sh"><h2>通知记录</h2></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>') + '</div>'
     + '<div class="ft">Cloudflare Workers \u00b7 Wise Design</div></div>'
-    + '<div id="ov" class="ov"><div class="md"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button><button class="bp" onclick="saveEdit()" style="flex:1">保存</button></div></div></div>'
+    + detailModal + editModal
     + '<div id="tt" class="tt"></div>'
     + '<script>' + script + '</script></body></html>';
 }

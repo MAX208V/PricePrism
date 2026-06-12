@@ -138,8 +138,7 @@ ${noApps}
 <script>
 var tt=document.getElementById("tt"),ttm,edId=null;
 function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}
-async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}
-function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}
+async function api(p,o){var r=await fetch(p,Object.assign({},oheaders"if(d失败.error){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}
 function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}
 function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}
 function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}
@@ -151,7 +150,7 @@ async function doSearch() {
   var term=document.getElementById("searchTerm").value.trim();
   if(!term){show("请输入关键词");return}
   var el=document.getElementById("searchResults");
-  el.innerHTML='<div class="ld"><span class="sp"></span> 搜索中...</div>';
+  el.innerHTML='<div class="ld">搜索中...</div>';
   try {
     var d=await api("/api/search?term="+encodeURIComponent(term));
     if(!d.results||d.results.length===0){el.innerHTML='<div class="ld">未找到结果</div>';return}
@@ -160,10 +159,10 @@ async function doSearch() {
       var r=d.results[i];
       var icon=r.icon||"";
       var price=r.priceText||(r.free?"免费":"");
-      var id=esc(r.appId||"");
-      var title=esc(r.title||"");
-      var dev=esc(r.developer||"");
-      h+='<div class="sri" onclick="fillApp(\''+id+'\',\''+title+'\')"><img src="'+icon+'" alt="" onerror="this.style.display=\'none\'"><div class="srd"><div class="srn">'+title+'</div><div class="sra">'+id+' · '+dev+'</div></div><div class="srp">'+esc(price)+'</div></div>';
+      var id=r.appId||"";
+      var title=r.title||"";
+      var dev=r.developer||"";
+      h+='<div class="sri" onclick="fillApp(\''+id.replace(/'/g,"\\'")+'\',\''+title.replace(/'/g,"\\'")+'\')"><img src="'+icon+'" alt="" onerror="this.style.display=\'none\'"><div class="srd"><div class="srn">'+title+'</div><div class="sra">'+id+' · '+dev+'</div></div><div class="srp">'+price+'</div></div>';
     }
     el.innerHTML='<div class="sr">'+h+'</div>';
   } catch(e){el.innerHTML='<div class="ld">搜索失败</div>'}
@@ -171,7 +170,7 @@ async function doSearch() {
 function fillApp(id,name){
   document.querySelector('input[name="app_id"]').value=id;
   document.querySelector('input[name="name"]').value=name;
-  document.getElementById("searchResults").innerHTML='<div class="ld">✅ 已选择：'+esc(name)+'</div>';
+  document.getElementById("searchResults").innerHTML='<div class="ld" style="color:var(--pos)">已选择：'+name+'</div>';
   document.getElementById("searchTerm").value="";
 }
 <\/script></body></html>`;

@@ -2,7 +2,7 @@
 const APP_ID = "com.flyersoft.moonreaderp";
 const COUNTRY = "us";
 const LANG = "en";
-const PRICE_THRESHOLD = 6; // 低于 6 USD 通知
+const PRICE_THRESHOLD = 20; // 低于 6 USD 通知
 
 // ==================== 主入口 ====================
 export default {

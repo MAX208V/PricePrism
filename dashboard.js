@@ -57,10 +57,9 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>'
     : "";
   const searchBox = hasProxy
-    ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
+    ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
     : "";
 
-  // 构建添加表单
   var formHtml = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
   formHtml += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
   formHtml += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';

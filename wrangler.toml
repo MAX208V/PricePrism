@@ -2,6 +2,7 @@
 name = 'play-scraper-api'
 main = "_worker.js"
 compatibility_date = "2024-02-20"
+keep_vars = true
 
 # 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
 [triggers]

@@ -64,53 +64,57 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
   var warn = !hasSc3 ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>' : "";
   var searchBox = hasProxy ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px"><span class="mat">search</span></button></div><div id="searchResults"></div></div>' : "";
 
-  var formHtml = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
-  formHtml += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
-  formHtml += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
-  formHtml += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
-  formHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name type01><div></ '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
+  // 添加表单 - 用单独变量构建，避免拼接损坏
+  var addForm = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
+  addForm += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
+  addForm += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
+  addForm += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
+  addForm += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>';
+  addForm += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
 
-  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit= Monitor href?" href/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"><style>'
-    + ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--f:Inter,sans-serif}'
-    + '*{margin:0;padding:0;box-sizing:border-box}'
-    + 'body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}'
-    + '.wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}'
-    + '.brd{display:flex;align-items:center;gap:var(--sm);margin-bottom:4px}.brd-i{width:36px;height:36px;background:var(--p);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--op);flex-shrink:0}.brd-i .mat{font-size:20px}'
-    + 'h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}'
-    + '.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}.sc-h .mat{font-size:22px;color:var(--p)}.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}'
-    + '.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}'
-    + '.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}'
-    + '.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
-    + '.acnote{font-size:11px;color:#856404;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
-    + '.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}.acb{padding:0 var(--sl) var(--sl)}'
-    + '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}'
-    + '.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}'
-    + '.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.star{color:#fbbc04}'
-    + '.ar{display:flex;gap:var(--ss)}.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}.bs:hover{background:var(--pp);color:#163300}.bs .mat{font-size:18px}.bs.br .mat{color:var(--neg)}'
-    + '.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}.bp:hover{background:var(--pa)}.bp:disabled{opacity:0.5;cursor:default}'
-    + '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}'
-    + '.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}'
-    + '.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--ss)}.sh h2{font-size:18px;font-weight:700;letter-spacing:-.02em}'
-    + '.hr{display:flex;align-items:center;gap:var(--ss);padding:10px 0;border-bottom:1px solid var(--s);font-size:13px}.hr:last-child{border-bottom:none}.ht{color:var(--m);font-weight:500;white-space:nowrap;min-width:52px;font-variant-numeric:tabular-nums}.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp{font-weight:700;font-variant-numeric:tabular-nums}.hb{padding:2px 10px;font-size:10px}'
-    + '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}'
-    + '.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}.tt.s{opacity:1}'
-    + '.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}'
-    + '.sh .bs{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:6px var(--sl);border-radius:var(--rp);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;border:none;gap:4px;background:var(--s);color:var(--k)}.sh .bs:hover{background:var(--pp);color:#163300}.sh .bs .mat{font-size:14px}'
-    + '.mat{font-family:Material Symbols Rounded;font-weight:400;font-style:normal;font-size:18px;display:inline-block;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;word-wrap:normal}'
-    + '.ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:9999;display:none;align-items:center;justify-content:center;padding:var(--sl)}.ov.s{display:flex}'
-    + '.md{background:var(--c);border-radius:var(--rx);width:100%;max-width:400px;padding:var(--sxl);box-shadow:0 8px 40px rgba(14,15,12,.12)}.md h2{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-bottom:var(--sm)}'
-    + '.sr{margin-top:var(--sm);display:flex;flex-direction:column;gap:var(--ss)}'
-    + '.sri{display:flex;align-items:center;gap:var(--sm);background:var(--s);border-radius:var(--rm);padding:var(--sm);cursor:pointer;transition:background .15s}.sri:hover{background:var(--pp)}.sri img{width:40px;height:40px;border-radius:8px;flex-shrink:0}.sri .srd{flex:1;min-width:0}.sri .srd .srn{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srd .sra{font-size:11px;color:var(--m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srp{font-size:13px;font-weight:600;color:var(--pos);white-space:nowrap}'
-    + '</style></head><body><div class="wr">'
-    + '<div class="brd"><div class="brd-i"><span class="mat">monitoring</span></div><div><h1>Price Monitor</h1><div class="sb">极简 \u00b7 智能 \u00b7 省心</div></div></div>'
-    + warn + searchBox
-    + '<div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>'
-    + noApps + formHtml
-    + '<div class="cd"><div class="sh"><h2>通知记录</h2></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>') + '</div>'
-    + '<div class="ft">Cloudflare Workers \u00b7 Wise Design</div></div>'
-    + DTL + EDT
-    + '<div id="tt" class="tt"></div>'
-    + '<script>' + SCRIPT + '</script></body></html>';
+  var h = '<!DOCTYPE html><html lang="zh-CN"><head>';
+  h += '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">';
+  h += '<title>Price Monitor</title>';
+  h += '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">';
+  h += '<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">';
+  h += '<style>';
+  h += ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--f:Inter,sans-serif}';
+  h += '*{margin:0;padding:0;box-sizing:border-box}';
+  h += 'body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}';
+  h += '.wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}';
+  h += '.brd{display:flex;align-items:center;gap:var(--sm);margin-bottom:4px}.brd-i{width:36px;height:36px;background:var(--p);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--op);flex-shrink:0}.brd-i .mat{font-size:20px}';
+  h += 'h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}';
+  h += '.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}.sc-h .mat{font-size:22px;color:var(--p)}.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}';
+  h += '.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}';
+  h += '.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}';
+  h += '.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  h += '.acnote{font-size:11px;color:#856404;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  h += '.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}.acb{padding:0 var(--sl) var(--sl)}';
+  h += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}';
+  h += '.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}';
+  h += '.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.star{color:#fbbc04}';
+  h += '.ar{display:flex;gap:var(--ss)}.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}.bs:hover{background:var(--pp);color:#163300}.bs .mat{font-size:18px}.bs.br .mat{color:var(--neg)}';
+  h += '.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}.bp:hover{background:var(--pa)}.bp:disabled{opacity:0.5;cursor:default}';
+  h += '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}';
+  h += '.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}';
+  h += '.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--ss)}.sh h2{font-size:18px;font-weight:700;letter-spacing:-.02em}';
+  h += '.hr{display:flex;align-items:center;gap:var(--ss);padding:10px 0;border-bottom:1px solid var(--s);font-size:13px}.hr:last-child{border-bottom:none}.ht{color:var(--m);font-weight:500;white-space:nowrap;min-width:52px;font-variant-numeric:tabular-nums}.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp{font-weight:700;font-variant-numeric:tabular-nums}.hb{padding:2px 10px;font-size:10px}';
+  h += '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}';
+  h += '.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}.tt.s{opacity:1}';
+  h += '.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}';
+  h += '.sh .bs{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:6px var(--sl);border-radius:var(--rp);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer;border:none;gap:4px;background:var(--s);color:var(--k)}.sh .bs:hover{background:var(--pp);color:#163300}.sh .bs .mat{font-size:14px}';
+  h += '.mat{font-family:Material Symbols Rounded;font-weight:400;font-style:normal;font-size:18px;display:inline-block;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;word-wrap:normal}';
+  h += '.ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:9999;display:none;align-items:center;justify-content:center;padding:var(--sl)}.ov.s{display:flex}';
+  h += '.md{background:var(--c);border-radius:var(--rx);width:100%;max-width:400px;padding:var(--sxl);box-shadow:0 8px 40px rgba(14,15,12,.12)}.md h2{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-bottom:var(--sm)}';
+  h += '.sr{margin-top:var(--sm);display:flex;flex-direction:column;gap:var(--ss)}';
+  h += '.sri{display:flex;align-items:center;gap:var(--sm);background:var(--s);border-radius:var(--rm);padding:var(--sm);cursor:pointer;transition:background .15s}.sri:hover{background:var(--pp)}.sri img{width:40px;height:40px;border-radius:8px;flex-shrink:0}.sri .srd{flex:1;min-width:0}.sri .srd .srn{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srd .sra{font-size:11px;color:var(--m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srp{font-size:13px;font-weight:600;color:var(--pos);white-space:nowrap}';
+  h += '</style></head><body><div class="wr">';
+  h += '<div class="brd"><div class="brd-i"><span class="mat">monitoring</span></div><div><h1>Price Monitor</h1><div class="sb">极简 \u00b7 智能 \u00b7 省心</div></div></div>';
+  h += warn + searchBox;
+  h += '<div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>';
+  h += noApps + addForm;
+  h += '<div class="cd"><div class="sh"><h2>通知记录</h2></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:')ft</ EDTttCRIPT + '</script></body></html>';
+  return h;
 }
 
 export function esc(s) {

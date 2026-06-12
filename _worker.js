@@ -1,7 +1,6 @@
 // ==================== 导入 ====================
 import { renderHtml, esc } from "./dashboard.js";
 
-// ==================== 配置区 ====================
 const DEFAULT_COUNTRY = "us";
 const DEFAULT_LANG = "en";
 const DEFAULT_THRESHOLD = 6;
@@ -9,20 +8,13 @@ const DEFAULT_CURRENCY = "USD";
 const SCRAPER_API_DEFAULT = "https://play-scraper-api.vercel.app/api/price";
 const HISTORY_MAX = 50;
 
-// ==================== 主入口 ====================
 export default {
-  async scheduled(event, env, ctx) {
-    await monitorAndNotify(env);
-  },
+  async scheduled(event, env, ctx) { await monitorAndNotify(env); },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
-
     if (path === "/api/apps") return handleAppsApi(request, env);
-    if (path === "/check" || path === "/api/check") {
-      const res = await monitorAndNotify(env);
-      return jsonResponse(res);
-    }
+    if (path === "/check" || path === "/api/check") { const res = await monitorAndNotify(env); return jsonResponse(res); }
     if (path === "/api/history") return handleHistory(env);
     if (path === "/api/status") return handleStatus(env);
     if (path === "/api/search") return handleSearch(request, env);
@@ -31,7 +23,6 @@ export default {
   },
 };
 
-// ==================== API ====================
 async function handleAppsApi(request, env) {
   if (request.method === "GET") {
     const apps = await getApps(env);
@@ -45,42 +36,25 @@ async function handleAppsApi(request, env) {
   if (request.method === "POST") {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
-
     let name = body.name || "";
     const country = body.country || DEFAULT_COUNTRY;
     const lang = body.lang || DEFAULT_LANG;
-
     const apps = await getApps(env);
     if (apps.find(a => a.id === body.app_id)) return jsonResponse({ error: "App already exists" }, 409);
-
-    // 先获取应用信息，尝试取 title 作为名称
     let info = null;
-    try {
-      info = await fetchAppInfo(env, body.app_id, country, lang);
-    } catch (e) {}
-
-    if (!name && info && info.title) {
-      name = info.title;
-    }
-    if (!name) name = body.app_id; // 实在没名称就用 app_id
-
+    try { info = await fetchAppInfo(env, body.app_id, country, lang); } catch (e) {}
+    if (!name && info && info.title) name = info.title;
+    if (!name) name = body.app_id;
     const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
     apps.push(appConfig);
     await env.KV.put("config:apps", JSON.stringify(apps));
-
-    // 存入获取到的信息
     if (info) {
-      const statusKey = "status:" + body.app_id;
-      const st = await env.KV.get(statusKey, "json") || {};
+      const st = await env.KV.get("status:" + body.app_id, "json") || {};
       st.last_checked_price = info.price;
       st.last_checked_at = new Date().toISOString();
-      st.icon = info.icon;
-      st.score = info.score;
-      st.scoreText = info.scoreText;
-      st.installs = info.installs;
-      await env.KV.put(statusKey, JSON.stringify(st));
+      st.icon = info.icon; st.score = info.score; st.scoreText = info.scoreText; st.ratings = info.ratings;
+      await env.KV.put("status:" + body.app_id, JSON.stringify(st));
     }
-
     return jsonResponse({ ok: true, name });
   }
   if (request.method === "DELETE") {
@@ -105,9 +79,7 @@ async function handleAppsApi(request, env) {
   return jsonResponse({ error: "Method not allowed" }, 405);
 }
 
-async function handleHistory(env) {
-  return jsonResponse(await env.KV.get("history", "json") || []);
-}
+async function handleHistory(env) { return jsonResponse(await env.KV.get("history", "json") || []); }
 
 async function handleStatus(env) {
   const apps = await getApps(env);
@@ -119,7 +91,6 @@ async function handleStatus(env) {
   return jsonResponse(result);
 }
 
-// ==================== 搜索（通过 proxy） ====================
 async function handleSearch(request, env) {
   const term = new URL(request.url).searchParams.get("term");
   if (!term) return jsonResponse({ error: "term required" }, 400);
@@ -130,12 +101,9 @@ async function handleSearch(request, env) {
     const data = await resp.json();
     if (!data.ok) return jsonResponse({ error: data.error || "search failed" }, 500);
     return jsonResponse({ ok: true, results: data.data });
-  } catch (e) {
-    return jsonResponse({ error: e.message }, 500);
-  }
+  } catch (e) { return jsonResponse({ error: e.message }, 500); }
 }
 
-// ==================== 获取应用信息 ====================
 async function fetchAppInfo(env, appId, country, lang) {
   const proxy = env.SCRAPER_PROXY;
   if (proxy) {
@@ -144,26 +112,19 @@ async function fetchAppInfo(env, appId, country, lang) {
       const data = await resp.json();
       if (data.ok && data.data) {
         return {
-          price: data.data.price,
-          currency: data.data.currency || "USD",
-          icon: data.data.icon,
-          title: data.data.title,
-          score: data.data.score,
-          scoreText: data.data.scoreText,
-          installs: data.data.installs,
+          price: data.data.price, currency: data.data.currency || "USD",
+          icon: data.data.icon, title: data.data.title,
+          score: data.data.score, scoreText: data.data.scoreText,
+          ratings: data.data.ratings,
         };
       }
     } catch (e) {}
   }
   const fallbackResp = await fetch((env.SCRAPER_API || SCRAPER_API_DEFAULT) + "?id=" + appId + "&country=" + country + "&lang=" + lang);
-  if (fallbackResp.ok) {
-    const data = await fallbackResp.json();
-    return { price: data.price, currency: data.currency || "USD" };
-  }
+  if (fallbackResp.ok) { const data = await fallbackResp.json(); return { price: data.price, currency: data.currency || "USD" }; }
   return null;
 }
 
-// ==================== 核心监控 ====================
 async function monitorAndNotify(env) {
   const SCRAPER_API = env.SCRAPER_API || SCRAPER_API_DEFAULT;
   const SC3_UID = env.SC3_UID;
@@ -182,35 +143,29 @@ async function monitorAndNotify(env) {
 
 async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   const { id, name, country, lang, threshold } = app;
-  let price, cur = "USD", icon, score, scoreText, installs;
+  let price, cur = "USD", icon, score, scoreText, ratings;
   if (proxy) {
     try {
       const resp = await fetch(proxy + "?method=app&appId=" + id + "&country=" + country + "&lang=" + lang);
       const data = await resp.json();
       if (data.ok && data.data) {
-        price = data.data.price;
-        cur = data.data.currency || "USD";
-        icon = data.data.icon;
-        score = data.data.score;
-        scoreText = data.data.scoreText;
-        installs = data.data.installs;
+        price = data.data.price; cur = data.data.currency || "USD";
+        icon = data.data.icon; score = data.data.score; scoreText = data.data.scoreText;
+        ratings = data.data.ratings;
       }
     } catch (e) {}
   }
   if (price === undefined) {
     const priceInfo = await fetchPrice(scraperApi, id, country, lang);
     if (!priceInfo || !priceInfo.ok) return { app_id: id, name, ok: false, error: "fetch_price_failed" };
-    price = priceInfo.price;
-    cur = priceInfo.currency || "USD";
+    price = priceInfo.price; cur = priceInfo.currency || "USD";
   }
   const statusKey = "status:" + id;
   const status = await env.KV.get(statusKey, "json") || {};
   status.last_checked_price = price;
   status.last_checked_at = new Date().toISOString();
-  status.icon = icon || status.icon;
-  status.score = score || status.score;
-  status.scoreText = scoreText || status.scoreText;
-  status.installs = installs || status.installs;
+  status.icon = icon || status.icon; status.score = score || status.score;
+  status.scoreText = scoreText || status.scoreText; status.ratings = ratings || status.ratings;
   const below = price > 0 && price < threshold && cur === "USD";
   let notified = false, reason = null;
   if (below) {
@@ -222,14 +177,13 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   }
   if (notified) {
     const nr = await sendSc3(sc3Uid, sc3Sendkey, name + " 降价啦！", "**" + price + " " + cur + "**，已低于阈值 " + threshold + " " + cur + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + "&hl=" + lang + "&gl=" + country + ")");
-    status.last_notified_price = price;
-    status.last_notified_at = new Date().toISOString();
+    status.last_notified_price = price; status.last_notified_at = new Date().toISOString();
     await appendHistory(env, { app_id: id, name, price, threshold, time: new Date().toISOString(), notified: true });
     await env.KV.put(statusKey, JSON.stringify(status));
-    return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, installs, sc3: nr };
+    return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, ratings, sc3: nr };
   }
   await env.KV.put(statusKey, JSON.stringify(status));
-  return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: false, reason, icon, score, scoreText, installs };
+  return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: false, reason, icon, score, scoreText, ratings };
 }
 
 async function fetchPrice(api, appId, country, lang) {
@@ -256,7 +210,6 @@ function jsonResponse(data, status) {
   return new Response(JSON.stringify(data), { status: status || 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 }
 
-// ==================== 管理面板 ====================
 async function handleDashboard(env) {
   const apps = await getApps(env);
   const list = [];

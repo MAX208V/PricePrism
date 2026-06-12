@@ -60,6 +60,17 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     ? '<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>'
     : "";
 
+  // 构建添加表单
+  var formHtml = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
+  formHtml += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
+  formHtml += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
+  formHtml += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
+  formHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)">';
+  formHtml += '<div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div>';
+  formHtml += '<div><div class="lb">地区</div><input class="in" name="country" value="us"></div>';
+  formHtml += '</div></div>';
+  formHtml += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
+
   var parts = [];
   parts.push('var tt=document.getElementById("tt"),ttm,edId=null;');
   parts.push('function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}');
@@ -126,7 +137,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + '.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
     + '.hp{font-weight:700;font-variant-numeric:tabular-nums}'
     + '.hb{padding:2px 10px;font-size:10px}'
-    + '.w{background:#fff3cd;color:#856404;border-radius(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}'
+    + '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}'
     + '.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}'
     + '.tt.s{opacity:1}'
     + '.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}'
@@ -152,11 +163,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     + searchBox
     + '<div class="sh"><h2>监控应用</h2><button class="bs" onclick="checkAll()"><span class="mat">refresh</span></button></div>'
     + noApps
-    + '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>'
-    + '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">'
-    + '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>'
-    + '<div><div class="lb">显示名称 <span stylecolor:var(--m);font-weight:400;获取   ss="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>'
-    + '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>'
+    + formHtml
     + '<div class="cd"><div class="sh"><h2>通知记录</h2></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>') + '</div>'
     + '<div class="ft">Cloudflare Workers \u00b7 Wise Design</div></div>'
     + '<div id="ov" class="ov"><div class="md"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button><button class="bp" onclick="saveEdit()" style="flex:1">保存</button></div></div></div>'

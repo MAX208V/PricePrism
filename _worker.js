@@ -50,9 +50,8 @@ async function handleAppsApi(request, env) {
     await env.KV.put("config:apps", JSON.stringify(apps));
     if (info) {
       const st = await env.KV.get("status:" + body.app_id, "json") || {};
-      st.last_checked_price = info.price;
-      st.last_checked_at = new Date().toISOString();
-      st.icon = info.icon; st.score = info.score; st.scoreText = info.scoreText; st.ratings = info.ratings;
+      st.last_checked_price = info.price; st.last_checked_at = new Date().toISOString();
+      st.icon = info.icon; st.score = info.score; st.scoreText = info.scoreText; st.ratings = info.ratings; st.developer = info.developer;
       await env.KV.put("status:" + body.app_id, JSON.stringify(st));
     }
     return jsonResponse({ ok: true, name });
@@ -115,7 +114,7 @@ async function fetchAppInfo(env, appId, country, lang) {
           price: data.data.price, currency: data.data.currency || "USD",
           icon: data.data.icon, title: data.data.title,
           score: data.data.score, scoreText: data.data.scoreText,
-          ratings: data.data.ratings,
+          ratings: data.data.ratings, developer: data.data.developer,
         };
       }
     } catch (e) {}
@@ -143,7 +142,7 @@ async function monitorAndNotify(env) {
 
 async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   const { id, name, country, lang, threshold } = app;
-  let price, cur = "USD", icon, score, scoreText, ratings;
+  let price, cur = "USD", icon, score, scoreText, ratings, developer;
   if (proxy) {
     try {
       const resp = await fetch(proxy + "?method=app&appId=" + id + "&country=" + country + "&lang=" + lang);
@@ -151,7 +150,7 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
       if (data.ok && data.data) {
         price = data.data.price; cur = data.data.currency || "USD";
         icon = data.data.icon; score = data.data.score; scoreText = data.data.scoreText;
-        ratings = data.data.ratings;
+        ratings = data.data.ratings; developer = data.data.developer;
       }
     } catch (e) {}
   }
@@ -162,10 +161,10 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   }
   const statusKey = "status:" + id;
   const status = await env.KV.get(statusKey, "json") || {};
-  status.last_checked_price = price;
-  status.last_checked_at = new Date().toISOString();
+  status.last_checked_price = price; status.last_checked_at = new Date().toISOString();
   status.icon = icon || status.icon; status.score = score || status.score;
   status.scoreText = scoreText || status.scoreText; status.ratings = ratings || status.ratings;
+  status.developer = developer || status.developer;
   const below = price > 0 && price < threshold && cur === "USD";
   let notified = false, reason = null;
   if (below) {
@@ -180,10 +179,10 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
     status.last_notified_price = price; status.last_notified_at = new Date().toISOString();
     await appendHistory(env, { app_id: id, name, price, threshold, time: new Date().toISOString(), notified: true });
     await env.KV.put(statusKey, JSON.stringify(status));
-    return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, ratings, sc3: nr };
+    return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, ratings, developer, sc3: nr };
   }
   await env.KV.put(statusKey, JSON.stringify(status));
-  return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: false, reason, icon, score, scoreText, ratings };
+  return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: false, reason, icon, score, scoreText, ratings, developer };
 }
 
 async function fetchPrice(api, appId, country, lang) {

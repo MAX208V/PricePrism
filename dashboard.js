@@ -15,7 +15,7 @@ export function renderHtml(apps, history, hasSc3) {
     const ts = fmtUTC(s.last_checked_at);
     const ns = fmtUTC(s.last_notified_at);
     const lo = p !== undefined && p > 0 && p < a.threshold;
-    cards += `<div class="ac"><div class="ach"><div class="acn"><div class="act">${esc(a.name)}</div><div class="aci">${esc(a.id)}</div></div><span class="${lo?"bg":"bg gy"}">${lo?"低于阈值":"正常"}</span></div><div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v${lo?" gr":""}">${ps}</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$${a.threshold}</div></div><div class="gi"><div class="gl">检查</div><div class="v">${ts}</div></div><div class="gi"><div class="gl">通知</div><div class="v">${ns}</div></div></div><div class="ar"><button class="bs" onclick="editApp('${esc(a.id)}','${esc(a.name)}',${a.threshold})"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp('${esc(a.id)}')"><span class="mat">delete</span></button></div></div></div>`;
+    cards += `<div class="ac"><div class="ach"><div class="acn"><div class="act">${esc(a.name)}</div><div class="aci">${esc(a.id)}</div></div><span class="${lo?"bg":"bg gy"}">${lo?"低于阈值":"正常"}</span></div><div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v${lo?" gr":""}">${ps}</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$${a.threshold}</div></div><div class="gi"><div class="gl">检查</div><div class="v">${ts}</div></div><div class="gi"><div class="gl">通知</div><div class="v">${ns}</div></div></div><div class="ar"><button class="bs" onclick="editApp('${esc(a.id)}','${esc(a.name)}','${esc(a.country||"us")}',${a.threshold})"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp('${esc(a.id)}')"><span class="mat">delete</span></button></div></div></div>`;
   }
 
   let hr = "";
@@ -82,6 +82,10 @@ h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}
 .sh .bs:hover{background:var(--pp);color:#163300}
 .sh .bs .mat{font-size:14px}
 .mat{font-family:Material Symbols Rounded;font-weight:400;font-style:normal;font-size:18px;display:inline-block;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;word-wrap:normal}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:9999;display:none;align-items:center;justify-content:center;padding:var(--sl)}
+.ov.s{display:flex}
+.md{background:var(--c);border-radius:var(--rx);width:100%;max-width:400px;padding:var(--sxl);box-shadow:0 8px 40px rgba(14,15,12,.12)}
+.md h2{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-bottom:var(--sm)}
 </style></head><body><div class="wr">
 <div class="brd"><div class="brd-i"><span class="mat">monitoring</span></div><div><h1>Price Monitor</h1><div class="sb">极简 · 智能 · 省心</div></div></div>
 ${warn}
@@ -95,14 +99,32 @@ ${noApps}
 <button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>
 <div class="cd"><div class="sh"><h2>通知记录</h2></div>${history.length ? `<div>${hr}</div>` : `<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>`}</div>
 <div class="ft">Cloudflare Workers · Wise Design</div></div>
+
+<div id="ov" class="ov">
+  <div class="md">
+    <h2>编辑应用</h2>
+    <div style="display:grid;gap:var(--ss)">
+      <div><div class="lb">显示名称</div><input class="in" id="eName"></div>
+      <div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div>
+      <div><div class="lb">地区</div><input class="in" id="eCountry"></div>
+    </div>
+    <div class="rw" style="margin-top:var(--sm)">
+      <button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button>
+      <button class="bp" onclick="saveEdit()" style="flex:1">保存</button>
+    </div>
+  </div>
+</div>
+
 <div id="tt" class="tt"></div>
 <script>
-var tt=document.getElementById("tt"),ttm;
+var tt=document.getElementById("tt"),ttm,edId=null;
 function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}
 async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}
 function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name"),threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}
 function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}
-function editApp(id,n,t){var v=prompt("编辑 "+n+" 的阈值 (USD):",t);if(v===null||v==="")return;var p=parseFloat(v);if(isNaN(p)||p<=0){show("无效数值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:id,threshold:p})}).then(function(){show("已更新");setTimeout(function(){location.reload()},800)})}
+function editApp(id,n,c,t){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("ov").classList.add("s")}
+function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}
+function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}api("/api/apps",{method:"PATCH",body:JSON.stringify({app_id:edId,name:n,threshold:t,country:c})}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}
 function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}
 <\/script></body></html>`;
 }

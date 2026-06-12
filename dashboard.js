@@ -2,8 +2,9 @@
 
 function fmtUTC(iso) {
   if (!iso) return "-";
-  const d = new Date(iso);
-  return d.toLocaleString("zh-CN", { timeZone: "UTC", hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) + " UTC";
+  var d = new Date(iso);
+  var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
+  return pad(d.getUTCMonth() + 1) + "/" + pad(d.getUTCDate()) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + " UTC";
 }
 
 var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'

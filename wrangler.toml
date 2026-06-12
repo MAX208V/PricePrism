@@ -1,6 +1,6 @@
 # wrangler.toml
 name = 'play-scraper-api'
-main = "src/index.js"
+main = "_worker.js"
 compatibility_date = "2024-02-20"
 
 # 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）

@@ -6,7 +6,6 @@ function fmtUTC(iso) {
   return d.toLocaleString("zh-CN", { timeZone: "UTC", hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) + " UTC";
 }
 
-// 详情弹窗 - 无返回按钮，点击遮罩关闭
 var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'
   + '<div id="detailContent"></div>'
   + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
@@ -40,13 +39,15 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     var p = st.last_checked_price, ps = p !== undefined ? "$" + p : "-";
     var ts = fmtUTC(st.last_checked_at), ns = fmtUTC(st.last_notified_at);
     var lo = p !== undefined && p > 0 && p < a.threshold;
-    var icon = st.icon || "", score = st.scoreText || "", ratings = st.ratings || "", note = a.note || "";
+    var icon = st.icon || "", score = st.scoreText || "", ratings = st.ratings || "", note = a.note || "", dev = st.developer || "";
 
     var head = '<div class="ach">';
     if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
     head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
     if (note) { head += '<div class="acnote">' + esc(note) + '</div>'; }
-    head += '<div class="aci">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+    head += '<div class="aci">';
+    if (dev) { head += esc(dev) + ' \u00b7 '; }
+    head += esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
 
     var extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "") + (ratings ? '<span style="color:var(--m)">|</span> ' + esc(ratings) : "") + '</div></div>';
 
@@ -67,10 +68,9 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
   formHtml += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
   formHtml += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
   formHtml += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
-  formHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>';
-  formHtml += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
+  formHtml += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name type01><div></ '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
 
-  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Price Monitor</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"><style>'
+  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit= Monitor href?" href/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"><style>'
     + ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--f:Inter,sans-serif}'
     + '*{margin:0;padding:0;box-sizing:border-box}'
     + 'body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}'

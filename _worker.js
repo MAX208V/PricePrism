@@ -47,8 +47,31 @@ async function handleAppsApi(request, env) {
     if (!body.app_id || !body.name) return jsonResponse({ error: "app_id and name required" }, 400);
     const apps = await getApps(env);
     if (apps.find(a => a.id === body.app_id)) return jsonResponse({ error: "App already exists" }, 409);
-    apps.push({ id: body.app_id, name: body.name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country: body.country || DEFAULT_COUNTRY, lang: body.lang || DEFAULT_LANG, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() });
+
+    const country = body.country || DEFAULT_COUNTRY;
+    const lang = body.lang || DEFAULT_LANG;
+    const appConfig = { id: body.app_id, name: body.name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
+    apps.push(appConfig);
     await env.KV.put("config:apps", JSON.stringify(apps));
+
+    // 添加后立即获取一次应用信息
+    try {
+      const info = await fetchAppInfo(env, body.app_id, country, lang);
+      if (info) {
+        const statusKey = "status:" + body.app_id;
+        const st = await env.KV.get(statusKey, "json") || {};
+        st.last_checked_price = info.price;
+        st.last_checked_at = new Date().toISOString();
+        st.icon = info.icon;
+        st.score = info.score;
+        st.scoreText = info.scoreText;
+        st.installs = info.installs;
+        await env.KV.put(statusKey, JSON.stringify(st));
+      }
+    } catch (e) {
+      // 静默失败，不影响添加
+    }
+
     return jsonResponse({ ok: true });
   }
   if (request.method === "DELETE") {
@@ -103,6 +126,34 @@ async function handleSearch(request, env) {
   }
 }
 
+// ==================== 获取应用信息 ====================
+async function fetchAppInfo(env, appId, country, lang) {
+  const proxy = env.SCRAPER_PROXY;
+  if (proxy) {
+    try {
+      const resp = await fetch(proxy + "?method=app&appId=" + appId + "&country=" + country + "&lang=" + lang, { headers: { Accept: "application/json" } });
+      const data = await resp.json();
+      if (data.ok && data.data) {
+        return {
+          price: data.data.price,
+          currency: data.data.currency || "USD",
+          icon: data.data.icon,
+          score: data.data.score,
+          scoreText: data.data.scoreText,
+          installs: data.data.installs,
+        };
+      }
+    } catch (e) { /* fallback */ }
+  }
+  // 降级到 price 接口，只能获取价格
+  const fallbackResp = await fetch((env.SCRAPER_API || SCRAPER_API_DEFAULT) + "?id=" + appId + "&country=" + country + "&lang=" + lang, { headers: { Accept: "application/json" } });
+  if (fallbackResp.ok) {
+    const data = await fallbackResp.json();
+    return { price: data.price, currency: data.currency || "USD" };
+  }
+  return null;
+}
+
 // ==================== 核心监控 ====================
 async function monitorAndNotify(env) {
   const SCRAPER_API = env.SCRAPER_API || SCRAPER_API_DEFAULT;
@@ -122,8 +173,6 @@ async function monitorAndNotify(env) {
 
 async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   const { id, name, country, lang, threshold } = app;
-
-  // 优先通过 proxy 的 app 方法获取完整信息（含图标、评分）
   let price, cur = "USD", icon, score, scoreText, installs;
   if (proxy) {
     try {
@@ -137,19 +186,14 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
         scoreText = data.data.scoreText;
         installs = data.data.installs;
       }
-    } catch (e) {
-      // fallback: 降级到 price 接口
-    }
+    } catch (e) {}
   }
-
-  // 降级：用原来的 price 接口
   if (price === undefined) {
     const priceInfo = await fetchPrice(scraperApi, id, country, lang);
     if (!priceInfo || !priceInfo.ok) return { app_id: id, name, ok: false, error: "fetch_price_failed" };
     price = priceInfo.price;
     cur = priceInfo.currency || "USD";
   }
-
   const statusKey = "status:" + id;
   const status = await env.KV.get(statusKey, "json") || {};
   status.last_checked_price = price;
@@ -158,7 +202,6 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   status.score = score || status.score;
   status.scoreText = scoreText || status.scoreText;
   status.installs = installs || status.installs;
-
   const below = price > 0 && price < threshold && cur === "USD";
   let notified = false, reason = null;
   if (below) {

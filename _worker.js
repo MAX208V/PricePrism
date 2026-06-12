@@ -113,7 +113,11 @@ export default {
     if (path === "/api/status") return handleStatus(env);
     if (path === "/api/search") return handleSearch(request, env);
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
-    return handleDashboard(env);
+    try {
+      return await handleDashboard(env);
+    } catch (e) {
+      return new Response("ERR: " + e.message + "\n" + e.stack, { status: 500, headers: { "Content-Type": "text/plain;charset=utf-8" } });
+    }
   },
 };
 
@@ -304,12 +308,13 @@ function jsonResponse(data, status) {
 }
 
 async function handleDashboard(env) {
-  const apps = await getApps(env);
-  const list = [];
-  for (const app of apps) {
-    const st = await env.KV.get("status:" + app.id, "json") || {};
-    list.push({ ...app, status: st });
+  var apps = await getApps(env);
+  var list = [];
+  for (var k = 0; k < apps.length; k++) {
+    var app = apps[k];
+    var st = await env.KV.get("status:" + app.id, "json") || {};
+    list.push({ id: app.id, name: app.name, threshold: app.threshold, country: app.country, note: app.note, status: st });
   }
-  const history = await env.KV.get("history", "json") || [];
+  var history = await env.KV.get("history", "json") || [];
   return new Response(renderHtml(list, history, !!(env.SC3_UID && env.SC3_SENDKEY), !!(env.SCRAPER_PROXY)), { headers: { "Content-Type": "text/html;charset=utf-8" } });
 }

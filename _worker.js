@@ -16,7 +16,7 @@ export default {
     const path = url.pathname;
 
     if (path === "/api/apps") return handleAppsApi(request, env);
-    if (path === "/api/check") {
+    if (path === "/check" || path === "/api/check") {
       const res = await monitorAndNotify(env);
       return jsonResponse(res);
     }
@@ -259,9 +259,9 @@ function renderHtml(apps, history, hasSc3) {
 body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);min-height:100vh;display:flex;justify-content:center;padding:var(--sl)}
 h1{font-size:28px;font-weight:900;letter-spacing:-.03em}
 h2{font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)}
-.sub{font-size:13px;color:var(--m);margin-bottom:14px}
-.wrap{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss)}
-.rw{display:flex;gap:var(--ss);flex-wrap:wrap}
+.sub{font-size:13;);}
+100480;column;gap:var(--sm);margin-top:var(--ss)}
+.rw{display:flex-wrap:wrap}
 .card{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden;padding:var(--sl)}
 .card-app{padding:0}
 .ca-h{display:flex;align-items:center;justify-content:space-between;padding:var(--sl) var(--sl) var(--ss)}
@@ -383,7 +383,7 @@ async function removeApp(id) {
 }
 
 async function editApp(id, name, threshold) {
-  const newT = prompt(\`编辑 "\${name}" 的降价阈值 (USD):\`, threshold);
+  const newT = prompt(`编辑 "${name}" 的降价阈值 (USD):`, threshold);
   if (newT === null || newT === "") return;
   const t = parseFloat(newT);
   if (isNaN(t) || t <= 0) { show("请输入有效数值"); return; }

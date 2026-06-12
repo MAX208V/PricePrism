@@ -1,6 +1,0 @@
-{
-  "name": "play-scraper-api",
-  "version": "1.0.0",
-  "private": true,
-  "description": "监控 Google Play Moon+ Reader Pro 价格并推送通知"
-}

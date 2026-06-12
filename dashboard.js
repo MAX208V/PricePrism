@@ -6,15 +6,13 @@ function fmtUTC(iso) {
   return d.toLocaleString("zh-CN", { timeZone: "UTC", hour12: false, month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) + " UTC";
 }
 
-// 详情弹窗独立构建，避免拼接出错
-var DTL = '<div id="dv" class="ov"><div class="md" id="detailMd">'
+// 详情弹窗 - 无返回按钮，点击遮罩关闭
+var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'
   + '<div id="detailContent"></div>'
   + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
   + '<div style="margin-top:var(--ss)"><div class="lb">地区</div><input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px"></div>'
-  + '<div class="rw" style="margin-top:var(--sm)">'
-  + '<button class="bs" onclick="closeDetail()" style="flex:1;width:auto;padding:0 var(--sl);height:40px;font-size:13px">返回</button>'
-  + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="flex:1;height:40px;font-size:14px">添加监控</button>'
-  + '</div></div></div>';
+  + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>'
+  + '</div></div>';
 
 var EDT = '<div id="ov" class="ov"><div class="md"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button><button class="bp" onclick="saveEdit()" style="flex:1">保存</button></div></div></div>';
 
@@ -38,17 +36,11 @@ var SCRIPT = [
 export function renderHtml(apps, history, hasSc3, hasProxy) {
   var cards = "";
   for (var i = 0; i < apps.length; i++) {
-    var a = apps[i];
-    var st = a.status || {};
-    var p = st.last_checked_price;
-    var ps = p !== undefined ? "$" + p : "-";
-    var ts = fmtUTC(st.last_checked_at);
-    var ns = fmtUTC(st.last_notified_at);
+    var a = apps[i], st = a.status || {};
+    var p = st.last_checked_price, ps = p !== undefined ? "$" + p : "-";
+    var ts = fmtUTC(st.last_checked_at), ns = fmtUTC(st.last_notified_at);
     var lo = p !== undefined && p > 0 && p < a.threshold;
-    var icon = st.icon || "";
-    var score = st.scoreText || "";
-    var installs = st.installs || "";
-    var note = a.note || "";
+    var icon = st.icon || "", score = st.scoreText || "", ratings = st.ratings || "", note = a.note || "";
 
     var head = '<div class="ach">';
     if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
@@ -56,10 +48,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
     if (note) { head += '<div class="acnote">' + esc(note) + '</div>'; }
     head += '<div class="aci">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
 
-    var extra = "";
-    if (score || installs) {
-      extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 安装量</div><div class="v">' + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "") + (installs ? '<span style="color:var(--m)">|</span> ' + esc(installs) : "") + '</div></div>';
-    }
+    var extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + (score ? '<span class="star">\u2605</span> ' + esc(score) + ' ' : "") + (ratings ? '<span style="color:var(--m)">|</span> ' + esc(ratings) : "") + '</div></div>';
 
     cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'" + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
   }

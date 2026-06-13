@@ -12,26 +12,27 @@ var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()
   + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
   + '<div style="margin-top:var(--ss)"><div class="lb">地区</div><input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px"></div>'
   + '<div style="margin-top:var(--ss)"><div class="lb">备注</div><input class="in" id="dtNote" placeholder="可写备注信息" style="height:40px;font-size:14px"></div>'
+  + '<div style="margin-top:var(--ss)"><label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer"><input type="checkbox" id="dtMonitorMode" value="change"> 价格变动时通知（忽略阈值）</label></div>'
   + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>'
   + '</div></div>';
 
-var EDT = '<div id="ov" class="ov" onclick="if(event.target===this)closeEdit()"><div class="md" onclick="event.stopPropagation()"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><button class="bp" onclick="saveEdit()" style="margin-top:var(--sm)">保存</button></div></div>';
+var EDT = '<div id="ov" class="ov" onclick="if(event.target===this)closeEdit()"><div class="md" onclick="event.stopPropagation()"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div><div><label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer"><input type="checkbox" id="eMonitorMode" value="change"> 价格变动时通知</label></div></div><button class="bp" onclick="saveEdit()" style="margin-top:var(--sm)">保存</button></div></div>';
 
 var SCRIPT = [
   'var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;',
   'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
   'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
-  'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||""})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
+  'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||"",monitor_mode:f.get("monitor_mode")?"change":"threshold"})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
   'function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}',
-  'function editApp(id,n,c,t,nt){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("ov").classList.add("s")}',
+  'function editApp(id,n,c,t,nt,mm){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("eMonitorMode").checked=!!mm;document.getElementById("ov").classList.add("s")}',
   'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
-  'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
+  'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim(),mm=document.getElementById("eMonitorMode").checked;if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt,monitor_mode:mm?"change":"threshold"};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
   'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
   'async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\\""+escJs(r.appId)+"\\",\\""+escJs(r.title)+"\\",\\""+escJs(r.icon||"")+"\\",\\""+escJs(r.priceText||(r.free?"免费":""))+"\\",\\""+escJs(r.developer||"")+"\\",\\""+escJs(r.scoreText||"")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}',
   'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\'").replace(/"/g,"&quot;")}',
   'function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:44px;height:44px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div><div style=\'font-size:17px;font-weight:700\'>"+title+"</div><div style=\'font-size:11px;color:var(--m);margin-top:1px\'>"+id+"</div></div></div>";h+="<div class=\'g\' style=\'margin-bottom:0\'>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'mat\' style=\'font-size:14px;color:#fbbc04;vertical-align:middle\'>star</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'padding:10px;margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}',
   'function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}',
-  'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();var nt=document.getElementById("dtNote").value.trim();if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us",note:nt||""})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',
+  'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();var nt=document.getElementById("dtNote").value.trim();var mm=document.getElementById("dtMonitorMode").checked;if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us",note:nt||"",monitor_mode:mm?"change":"threshold"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',
 ].join("");
 
 function renderHtml(apps, history, hasSc3, hasProxy) {
@@ -41,14 +42,15 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       var a = apps[i], st = a.status || {};
       var p = st.last_checked_price, ps = p !== undefined ? "$" + p : "-";
       var ts = fmtUTC(st.last_checked_at), ns = fmtUTC(st.last_notified_at);
-      var lo = p !== undefined && p > 0 && p < a.threshold;
+      var cm = a.monitor_mode === "change";
+      var lo = !cm && p !== undefined && p > 0 && p < a.threshold;
       var icon = st.icon || "", score = st.scoreText || "", ratings = st.ratings || "", note = a.note || "", dev = st.developer || "";
       var rn = parseInt(ratings, 10), rd = !isNaN(rn) && rn >= 1000 ? (rn / 1000).toFixed(1).replace(/\.0$/, "") + "k" : ratings;
       var head = '<div class="ach">';
       if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
       head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
       if (dev) { head += '<div class="aci">' + esc(dev) + '</div>'; }
-      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (cm ? "bg tc" : (lo ? "bg" : "bg gy")) + '">' + (cm ? "变动" : (lo ? "低于阈值" : "正常")) + '</span></div>';
       var sv = (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (rd ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(rd) : "");
       var extra;
       if (note) {
@@ -56,7 +58,7 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       } else {
         extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + sv + '</div></div>';
       }
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'" + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v">' + (cm ? "变动" : "$" + a.threshold) + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
     }
     var hr = "";
     for (var j = 0; j < history.length; j++) {
@@ -72,12 +74,13 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
     addForm += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
     addForm += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>';
     addForm += '<div><div class="lb">备注</div><input class="in" name="note" placeholder="可写备注信息"></div>';
+    addForm += '<div><label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer"><input type="checkbox" name="monitor_mode" value="change"> 价格变动时通知（忽略阈值）</label></div>';
     addForm += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
     var out = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Price Monitor</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"><style>';
     out += ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--sxl:24px;--f:Inter,sans-serif}@media(prefers-color-scheme:dark){:root{--p:#9fe870;--op:#e8e6e3;--pa:#2a5a2a;--pp:#1a3a1a;--k:#e8e6e3;--b:#a0a0a0;--m:#6b6b6b;--c:#1c1c1e;--s:#2c2c2e;--pos:#4ade80;--neg:#f87171}}';
     out += '*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}.wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}';
     out += '.brd{display:flex;align-items:center;gap:var(--sm);margin-bottom:4px}.brd-i{width:36px;height:36px;background:var(--p);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--op);flex-shrink:0}.brd-i .mat{font-size:20px}h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}.sc-h .mat{font-size:22px;color:var(--p)}.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}.acb{padding:0 var(--sl) var(--sl)}';
-    out += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.ar{display:flex;gap:var(--ss)}';
+    out += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}.bg.tc{background:#dbeafe;color:#1e40af}.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.ar{display:flex;gap:var(--ss)}';
     out += '.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}.bs:hover{background:var(--pp);color:#163300}.bs .mat{font-size:18px}.bs.br .mat{color:var(--neg)}.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}.bp:hover{background:var(--pa)}.bp:disabled{opacity:0.5;cursor:default}';
     out += '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--ss)}.sh h2{font-size:18px;font-weight:700;letter-spacing:-.02em}';
     out += '.hr{display:flex;align-items:center;gap:var(--ss);padding:10px 0;border-bottom:1px solid var(--s);font-size:13px}.hr:last-child{border-bottom:none}.ht{color:var(--m);font-weight:500;white-space:nowrap;min-width:52px;font-variant-numeric:tabular-nums}.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp{font-weight:700;font-variant-numeric:tabular-nums}.hb{padding:2px 10px;font-size:10px}';
@@ -154,7 +157,7 @@ async function handleAppsApi(request, env) {
     try { info = await fetchAppInfo(env, body.app_id, country, lang); } catch (e) {}
     if (!name && info && info.title) name = info.title;
     if (!name) name = body.app_id;
-    const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString() };
+    const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString(), monitor_mode: body.monitor_mode || "threshold" };
     apps.push(appConfig);
     await env.KV.put("config:apps", JSON.stringify(apps));
     if (info) {
@@ -250,7 +253,7 @@ async function monitorAndNotify(env) {
 }
 
 async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
-  const { id, name, country, lang, threshold } = app;
+  const { id, name, country, lang, threshold, monitor_mode } = app;
   let price, cur = "USD", icon, score, scoreText, ratings, developer;
   if (proxy) {
     try {
@@ -274,17 +277,26 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   status.icon = icon || status.icon; status.score = score || status.score;
   status.scoreText = scoreText || status.scoreText; status.ratings = ratings || status.ratings;
   status.developer = developer || status.developer;
-  const below = price > 0 && price < threshold && cur === "USD";
   let notified = false, reason = null;
-  if (below) {
-    const last = status.last_notified_price;
-    if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
-    else if (price < last) { notified = true; reason = "price_dropped"; }
-    else if (price === last) { notified = false; reason = "price_unchanged"; }
-    else { notified = false; reason = "price_rose"; }
+  if (monitor_mode === "change") {
+    const lastCheck = status.last_checked_price;
+    if (lastCheck !== undefined && lastCheck !== null && lastCheck !== price) {
+      notified = true; reason = "price_changed";
+    }
+  } else {
+    const below = price > 0 && price < threshold && cur === "USD";
+    if (below) {
+      const last = status.last_notified_price;
+      if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
+      else if (price < last) { notified = true; reason = "price_dropped"; }
+      else if (price === last) { notified = false; reason = "price_unchanged"; }
+      else { notified = false; reason = "price_rose"; }
+    }
   }
   if (notified) {
-    const nr = await sendSc3(sc3Uid, sc3Sendkey, name + " 降价啦！", "**" + price + " " + cur + "**，已低于阈值 " + threshold + " " + cur + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + "&hl=" + lang + "&gl=" + country + ")");
+    const title = monitor_mode === "change" ? (name + " 价格变动") : (name + " 降价啦！");
+    const desp = "**" + price + " " + cur + "**" + (monitor_mode === "change" ? "（上次: $" + status.last_checked_price + "）" : "，已低于阈值 " + threshold + " " + cur) + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + "&hl=" + lang + "&gl=" + country + ")";
+    const nr = await sendSc3(sc3Uid, sc3Sendkey, title, desp);
     status.last_notified_price = price; status.last_notified_at = new Date().toISOString();
     await appendHistory(env, { app_id: id, name: name, price: price, threshold: threshold, time: new Date().toISOString(), notified: true });
     await env.KV.put(statusKey, JSON.stringify(status));
@@ -324,7 +336,7 @@ async function handleDashboard(env) {
   for (var k = 0; k < apps.length; k++) {
     var app = apps[k];
     var st = await env.KV.get("status:" + app.id, "json") || {};
-    list.push({ id: app.id, name: app.name, threshold: app.threshold, country: app.country, note: app.note, status: st });
+    list.push({ id: app.id, name: app.name, threshold: app.threshold, country: app.country, note: app.note, monitor_mode: app.monitor_mode, status: st });
   }
   var history = await env.KV.get("history", "json") || [];
   return new Response(renderHtml(list, history, !!(env.SC3_UID && env.SC3_SENDKEY), !!(env.SCRAPER_PROXY)), { headers: { "Content-Type": "text/html;charset=utf-8" } });

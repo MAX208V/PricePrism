@@ -50,7 +50,7 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
       head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
       if (dev) { head += '<div class="aci">' + esc(dev) + '</div>'; }
-      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (cm ? "bg tc" : (lo ? "bg" : "bg gy")) + '">' + (cm ? "变动" : (lo ? "低于阈值" : "正常")) + '</span></div>';
+      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
       var sv = (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (rd ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(rd) : "");
       var extra;
       if (note) {
@@ -58,7 +58,24 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       } else {
         extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + sv + '</div></div>';
       }
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v">' + (cm ? "变动" : "$" + a.threshold) + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+      var mv, ml;
+      if (cm) {
+        var initP = st.initial_price;
+        if (p !== undefined && initP !== undefined && p < initP) {
+          mv = "↓ $" + p;
+          ml = "最近降价";
+        } else if (p !== undefined && initP !== undefined && p > initP) {
+          mv = "↑ $" + p;
+          ml = "价格变动";
+        } else {
+          mv = p !== undefined ? "$" + p : "-";
+          ml = "当前价格";
+        }
+      } else {
+        mv = "$" + a.threshold;
+        ml = "阈值";
+      }
+      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + ml + '</div><div class="v' + (cm && p !== undefined && st.initial_price !== undefined && p < st.initial_price ? " gr" : "") + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
     }
     var hr = "";
     for (var j = 0; j < history.length; j++) {
@@ -82,9 +99,9 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
     out += '.st{display:inline-flex;align-items:center;gap:5px;background:var(--pp);color:var(--kd);padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;width:fit-content}.st .mat{font-size:13px}';
     out += '.rn{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:6px 18px;border-radius:14px;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;border:none;gap:4px;background:var(--s);color:var(--k)}.rn:hover{background:var(--pp);color:#163300}.rn .mat{font-size:16px}';
     out += '.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}.sc-h .mat{font-size:22px;color:var(--p)}.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}.acb{padding:0 var(--sl) var(--sl)}';
-    out += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}.bg.tc{background:#dbeafe;color:#1e40af}.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.ar{display:flex;gap:var(--ss)}';
+    out += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.ar{display:flex;gap:var(--ss)}';
     out += '.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}.bs:hover{background:var(--pp);color:#163300}.bs .mat{font-size:18px}.bs.br .mat{color:var(--neg)}.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}.bp:hover{background:var(--pa)}.bp:disabled{opacity:0.5;cursor:default}';
-    out += '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh;center-content:space-between}';
+    out += '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh{display:flex;align-items:center;justify-content:space-between}';
     out += '.tg{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--k)}.tg .tgi{display:none}.tg .tk{width:36px;height:20px;background:var(--s);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0}.tg .tk::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--m);border-radius:50%;transition:all .2s}.tg .tgi:checked+.tk{background:var(--p)}.tg .tgi:checked+.tk::after{background:var(--k);left:18px}';
     out += '.hr{display:flex;align-items:center;gap:var(--ss);padding:10px 0;border-bottom:1px solid var(--s);font-size:13px}.hr:last-child{border-bottom:none}.ht{color:var(--m);font-weight:500;white-space:nowrap;min-width:52px;font-variant-numeric:tabular-nums}.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp{font-weight:700;font-variant-numeric:tabular-nums}.hb{padding:2px 10px;font-size:10px}';
     out += '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}.tt.s{opacity:1}.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}';
@@ -164,6 +181,7 @@ async function handleAppsApi(request, env) {
     if (info) {
       const st = await env.KV.get("status:" + body.app_id, "json") || {};
       st.last_checked_price = info.price; st.last_checked_at = new Date().toISOString();
+      st.initial_price = info.price;
       st.icon = info.icon; st.score = info.score; st.scoreText = info.scoreText; st.ratings = info.ratings; st.developer = info.developer;
       await env.KV.put("status:" + body.app_id, JSON.stringify(st));
     }
@@ -274,6 +292,7 @@ async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
   }
   const statusKey = "status:" + id;
   const status = await env.KV.get(statusKey, "json") || {};
+  if (status.initial_price === undefined) { status.initial_price = price; }
   status.last_checked_price = price; status.last_checked_at = new Date().toISOString();
   status.icon = icon || status.icon; status.score = score || status.score;
   status.scoreText = scoreText || status.scoreText; status.ratings = ratings || status.ratings;

@@ -67,12 +67,22 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
           mv = "↓ $" + p;
           mc = " gr";
         } else {
-          mv = ps;
+          mv = "无变动";
         }
       } else {
         mv = "$" + a.threshold;
       }
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v' + mc + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+      var nv;
+      if (st.last_notified_price !== undefined && st.last_notified_price !== null) {
+        if (cm) {
+          nv = "变动 $" + st.last_notified_price;
+        } else {
+          nv = "阈值 $" + st.last_notified_price;
+        }
+      } else {
+        nv = "-";
+      }
+      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v' + mc + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + nv + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
     }
     var hr = "";
     for (var j = 0; j < history.length; j++) {

@@ -127,7 +127,7 @@ export default {
     if (path === "/api/history") return handleHistory(env);
     if (path === "/api/status") return handleStatus(env);
     if (path === "/api/search") return handleSearch(request, env);
-    return jsonResponse({ error: "Not found" }, 404);
+    if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
     try {
       return await handleDashboard(env);
     } catch (e) {

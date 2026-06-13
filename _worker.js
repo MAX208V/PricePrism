@@ -50,7 +50,9 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
       head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
       if (dev) { head += '<div class="aci">' + esc(dev) + '</div>'; }
-      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div><span class="' + (lo ? "bg" : "bg gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
+      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div>';
+      if (lo) { head += '<span class="bg">低于阈值</span>'; }
+      head += '</div>';
       var sv = (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (rd ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(rd) : "");
       var extra;
       if (note) {
@@ -58,24 +60,19 @@ function renderHtml(apps, history, hasSc3, hasProxy) {
       } else {
         extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + sv + '</div></div>';
       }
-      var mv, ml;
+      var mv, mc = "";
       if (cm) {
         var initP = st.initial_price;
         if (p !== undefined && initP !== undefined && p < initP) {
           mv = "↓ $" + p;
-          ml = "最近降价";
-        } else if (p !== undefined && initP !== undefined && p > initP) {
-          mv = "↑ $" + p;
-          ml = "价格变动";
+          mc = " gr";
         } else {
-          mv = p !== undefined ? "$" + p : "-";
-          ml = "当前价格";
+          mv = ps;
         }
       } else {
         mv = "$" + a.threshold;
-        ml = "阈值";
       }
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + ml + '</div><div class="v' + (cm && p !== undefined && st.initial_price !== undefined && p < st.initial_price ? " gr" : "") + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
+      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v' + mc + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
     }
     var hr = "";
     for (var j = 0; j < history.length; j++) {

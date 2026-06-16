@@ -1,5 +1,5 @@
 name = "play-scraper-api"
-main = "src/index.ts"
+main = "src/worker-entry.ts"
 compatibility_date = "2025-06-01"
 
 # KV 存储（保存应用配置和通知状态）

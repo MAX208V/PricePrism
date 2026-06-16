@@ -25,7 +25,7 @@ export class AppsRepository {
    */
   async getByAppId(appId: string) {
     const apps = await this.list()
-    return apps.find(app => app.appId === appId)
+    return apps.find((app: any) => app.appId === appId)
   }
   
   /**
@@ -46,7 +46,7 @@ export class AppsRepository {
    */
   async updateByAppId(appId: string, app: any) {
     const apps = await this.list()
-    const index = apps.findIndex(item => item.appId === appId)
+    const index = apps.findIndex((item: any) => item.appId === appId)
     
     if (index === -1) {
       throw new Error('应用不存在')
@@ -63,7 +63,7 @@ export class AppsRepository {
    */
   async deleteByAppId(appId: string) {
     const apps = await this.list()
-    const filtered = apps.filter(app => app.appId !== appId)
+    const filtered = apps.filter((app: any) => app.appId !== appId)
     await this.env.KV.put(this.KV_KEY, JSON.stringify(filtered))
   }
 }

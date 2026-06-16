@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import { HTTPException } from 'hono/http-exception'
 import { AppsRepository } from './repositories/app.repo'
 import { HistoryRepository } from './repositories/history.repo'
+import { PlayStoreService } from './services/playstore.service'
 import { renderHtml } from './dashboard/original-dashboard'
 
 // 初始化 Hono 应用
@@ -20,28 +20,10 @@ app.options('*', (c) => {
   return c.text('', 200)
 })
 
-// 统一成功响应
-export function success(data: any, message: string = 'Success') {
-  return c.json({
-    success: true,
-    message,
-    data
-  })
-}
-
-// 统一错误响应
-export function error(message: string, status: number = 400) {
-  return c.json({
-    success: false,
-    message
-  }, status)
-}
-
 // 主页 - 返回管理面板
 app.get('/', async (c) => {
   // 获取应用数据和历史记录
   const appsRepo = new AppsRepository(c.env)
-  const historyRepo = new HistoryRepository()
   
   try {
     const apps = await appsRepo.list()
@@ -96,6 +78,7 @@ app.post('/api/apps', async (c) => {
   try {
     const data = await c.req.json()
     const appsRepo = new AppsRepository(c.env)
+    const playStoreService = new PlayStoreService()
     
     // 验证必需字段
     if (!data.app_id) {
@@ -105,11 +88,20 @@ app.post('/api/apps', async (c) => {
       }, 400)
     }
     
+    // 获取应用详情
+    let appTitle = data.name || data.app_id
+    try {
+      const appDetails = await playStoreService.getAppDetails(data.app_id)
+      appTitle = appDetails.title
+    } catch (err) {
+      console.warn('获取应用详情失败:', err)
+    }
+    
     // 创建应用对象
     const app = {
-      id: self.crypto.randomUUID(), // 生成 UUID
+      id: crypto.randomUUID(), // 生成 UUID
       appId: data.app_id,
-      name: data.name || data.app_id,
+      name: appTitle,
       threshold: parseFloat(data.threshold) || 6.00,
       country: data.country || 'us',
       note: data.note || '',
@@ -207,41 +199,31 @@ app.delete('/api/apps', async (c) => {
   }
 })
 
-// API 路由：搜索应用（模拟）
+// API 路由：搜索应用
 app.get('/api/search', async (c) => {
   const term = c.req.query('term') || ''
   
-  // 模拟搜索结果（在实际实现中，这里应该调用 Google Play API）
-  const mockResults = [
-    {
-      appId: "com.example.app1",
-      title: "示例应用 1",
-      developer: "示例开发者",
-      priceText: "$1.99",
-      free: false,
-      scoreText: "4.5",
-      ratings: "1000",
-      icon: ""
-    },
-    {
-      appId: "com.example.app2",
-      title: "示例应用 2",
-      developer: "示例开发者",
-      priceText: "免费",
-      free: true,
-      scoreText: "4.2",
-      ratings: "500",
-      icon: ""
-    }
-  ].filter(item => 
-    item.title.toLowerCase().includes(term.toLowerCase()) ||
-    item.appId.toLowerCase().includes(term.toLowerCase())
-  )
+  if (!term) {
+    return c.json({
+      success: false,
+      message: '缺少搜索词'
+    }, 400)
+  }
   
-  return c.json({
-    success: true,
-    results: mockResults
-  })
+  try {
+    const playStoreService = new PlayStoreService()
+    const results = await playStoreService.search(term)
+    
+    return c.json({
+      success: true,
+      results: results
+    })
+  } catch (err) {
+    return c.json({
+      success: false,
+      message: err.message
+    }, 500)
+  }
 })
 
 // API 路由：价格检查（模拟）
@@ -263,12 +245,5 @@ app.post('/api/check', async (c) => {
   }
 })
 
-// 定时任务处理
-export default {
-  fetch: app.fetch,
-  
-  async scheduled(event: any, env: any, ctx: any) {
-    // 在实际实现中，这里应该执行定时的价格检查任务
-    console.log('执行定时任务:', event.cron)
-  }
-}
+// 导出应用
+export default app

@@ -1,4 +1,4 @@
-// ==================== 导入 ====================
+// ==================== 管理面板 HTML 模板 ====================
 import { renderHtml } from "./dashboard.js";
 
 // ==================== 配置区 ====================
@@ -110,13 +110,13 @@ async function monitorAndNotify(env) {
   if (!apps.length) return { ok: true, message: "No apps configured" };
   const results = [];
   for (const app of apps) {
-    try { results.push(await checkApp(app, SCRAPER_API, env)); }
+    try { results.push(await checkApp(app, SCRAPER_API, SC3_UID, SC3_SENDKEY, env)); }
     catch (e) { results.push({ app_id: app.id, name: app.name, ok: false, error: e.message }); }
   }
   return { ok: true, results };
 }
 
-async function checkApp(app, scraperApi, env) {
+async function checkApp(app, scraperApi, sc3Uid, sc3Sendkey, env) {
   const { id, name, country, lang, threshold } = app;
   let price, cur = "USD", icon, score, scoreText, installs;
   const priceInfo = await fetchPrice(scraperApi, id, country, lang);

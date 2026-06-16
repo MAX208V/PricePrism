@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Play Scraper Dashboard</title>
+<link rel="stylesheet" href="/dashboard/style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Play Scraper Dashboard</h1>
+      <nav>
+        <button id="refreshBtn">刷新</button>
+        <button id="checkAllBtn">检查所有</button>
+      </nav>
+    </header>
+    
+    <main>
+      <section id="searchSection">
+        <h2>搜索应用</h2>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="输入应用名称或关键词...">
+          <button id="searchBtn">搜索</button>
+        </div>
+        <div id="searchResults" class="results-container"></div>
+      </section>
+      
+      <section id="appsSection">
+        <h2>监控的应用</h2>
+        <div id="appsList" class="apps-container">
+          <div class="empty-state">暂无监控的应用</div>
+        </div>
+      </section>
+      
+      <section id="addAppSection">
+        <h2>添加应用</h2>
+        <form id="addAppForm">
+          <div class="form-group">
+            <label for="appId">Google Play ID *</label>
+            <input type="text" id="appId" name="appId" required placeholder="com.example.app">
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="threshold">降价阈值 (USD) *</label>
+              <input type="number" id="threshold" name="threshold" step="0.01" value="6.00" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="country">地区</label>
+              <input type="text" id="country" name="country" value="us" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="note">备注</label>
+            <input type="text" id="note" name="note" placeholder="可选备注信息">
+          </div>
+          
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="monitorMode" name="monitorMode">
+              价格变动时通知
+            </label>
+          </div>
+          
+          <button type="submit" id="addAppBtn">添加监控</button>
+        </form>
+      </section>
+      
+      <section id="historySection">
+        <h2>价格历史</h2>
+        <div id="historyList" class="history-container">
+          <div class="empty-state">暂无价格历史记录</div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>Play Scraper &copy; 2026</p>
+    </footer>
+  </div>
+  
+  <script src="/dashboard/store.js"></script>
+  <script src="/dashboard/api.js"></script>
+  <script src="/dashboard/app.js"></script>
+</body>
+</html>

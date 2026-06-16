@@ -20,7 +20,22 @@ var EDT = '<div id="ov" class="ov" onclick="if(event.target===this)closeEdit()">
 
 var SCRIPT = [
   'var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;',
-  'function getPriceDisplay(r){if(!r)return"";if(r.free===true||r.price===0){if(r.containsAds===true)return"免费(含广告)";if(r.inAppPurchases===true||r.offersIAP===true)return"免费+内购";return"免费"}if(r.priceText&&r.priceText!=="0"&&r.priceText!=="0.00")return r.priceText;if(r.price!==undefined&&r.price!==null){return"$"+(typeof r.price==="number"?r.price.toFixed(2):r.price)}return""}',
+  // 更新 getPriceDisplay 函数以更好地处理各种价格字段
+  'function getPriceDisplay(r){if(!r)return"";if(r.free===true||r.price===0){if(r.containsAds===true)return"免费(含广告)";if(r.inAppPurchases===true||r.offersIAP===true)return"免费+内购";return"免费"}'+
+  // 优先处理 price_text 字段（这是API返回的真实价格文本）
+  'if(r.price_text&&r.price_text!=="0"&&r.price_text!=="0.00")return r.price_text;'+
+  // 处理 priceText 字段（某些情况下可能用这个字段名）
+  'if(r.priceText&&r.priceText!=="0"&&r.priceText!=="0.00")return r.priceText;'+
+  // 处理 price 字段，可能是数字或其他格式
+  'if(r.price!==undefined&&r.price!==null&&r.price!==0){if(typeof r.price==="number")return"$"+r.price.toFixed(2);if(/^(\d+(\.\d+)?)$/.test(String(r.price)))return"$"+parseFloat(r.price).toFixed(2);return"$"+String(r.price)}'+
+  // 处理 formattedPrice 字段
+  'if(r.formattedPrice)return r.formattedPrice;'+
+  // 处理 priceAmountMicros 字段
+  'if(r.priceAmountMicros&&r.priceAmountMicros>0){var dollars=r.priceAmountMicros/1000000;return"$"+dollars.toFixed(2)}'+
+  // 处理 priceCurrencyCode 字段
+  'if(r.priceCurrencyCode)return r.priceCurrencyCode;'+
+  // 默认返回空字符串而不是"价格未知"
+  'return""}',
   'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
   'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
   'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||"",monitor_mode:f.get("monitor_mode")?"change":"threshold"})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
@@ -30,7 +45,7 @@ var SCRIPT = [
   'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim(),mm=document.getElementById("eMonitorMode").checked;if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt,monitor_mode:mm?"change":"threshold"};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
   'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
   'async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\""+r.appId+"\",\""+escJs(r.title)+"\",\""+escJs(r.icon||"")+"\",\""+escJs(getPriceDisplay(r))+"\",\""+escJs(r.developer||"")+"\",\""+escJs(r.scoreText||"")+"\')">";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\"none\"'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+getPriceDisplay(r)+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}',
-  'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\\\'").replace(/"/g,"&quot;")}',
+  'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\\\'/g,"\\\\\\\'").replace(/"/g,"&quot;")}',
   'function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:44px;height:44px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\"none\"'>"}h+="<div><div style=\'font-size:17px;font-weight:700\'>"+title+"</div><div style=\'font-size:11px;color:var(--m);margin-top:1px\'>"+id+"</div></div></div>";h+="<div class=\'g\' style=\'margin-bottom:0\'>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'mat\' style=\'font-size:14px;color:#fbbc04;vertical-align:middle\'>star</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'padding:10px;margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}',
   'function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}',
   'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();var nt=document.getElementById("dtNote").value.trim();var mm=document.getElementById("dtMonitorMode").checked;if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us",note:nt||"",monitor_mode:mm?"change":"threshold"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',

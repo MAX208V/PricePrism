@@ -91,124 +91,355 @@ body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);disp
 </div>
 
 <div id="tt" class="tt"></div>
+
 <script>
-var tt=document.getElementById("tt"),ttm,edId=null,detailData=null,hasProxy=false;
+// 核心工具函数
+var tt, ttm, edId = null, detailData = null, hasProxy = false;
 
-function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}
+// 初始化
+window.onload = function() {
+  tt = document.getElementById("tt");
+  ttm = null;
+  loadDashboard();
+};
 
-function esc(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;")}
+function show(m) {
+  tt.textContent = m;
+  tt.classList.add("s");
+  clearTimeout(ttm);
+  ttm = setTimeout(function() { tt.classList.remove("s"); }, 2500);
+}
 
-function fmtUTC(iso){if(!iso)return "-";var d=new Date(iso);var pad=function(n){return n<10?"0"+n:""+n};return pad(d.getUTCMonth()+1)+"/"+pad(d.getUTCDate())+" "+pad(d.getUTCHours())+":"+pad(d.getUTCMinutes())+" UTC"}
+function esc(s) {
+  if (!s) return "";
+  return s.replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+}
 
-async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}
+function fmtUTC(iso) {
+  if (!iso) return "-";
+  var d = new Date(iso);
+  var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
+  return pad(d.getUTCMonth() + 1) + "/" + pad(d.getUTCDate()) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + " UTC";
+}
+
+// API 包装函数
+async function api(p, o) {
+  try {
+    const res = await fetch(p, {
+      headers: { "Content-Type": "application/json" },
+      ...o
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      show(data.error || "请求失败");
+      throw new Error(data.error || "请求失败");
+    }
+    return data;
+  } catch (err) {
+    show("网络请求失败");
+    throw err;
+  }
+}
 
 // ===== 初始化加载数据 =====
-async function loadDashboard(){
-  try{
-    var [apps,history,status]=await Promise.all([
-      api("/api/apps",{method:"GET"}),
-      api("/api/history",{method:"GET"}),
-      api("/api/status",{method:"GET"}).catch(function(){return{}})
-    ]);
-    hasProxy=!!status.hasProxy;
+async function loadDashboard() {
+  try {
+    // 顺序加载，避免 Promise.all 中一个失败影响全部
+    const apps = await api("/api/apps", { method: "GET" });
+    const history = await api("/api/history", { method: "GET" }).catch(() => []);
+    const status = await api("/api/status", { method: "GET" }).catch(() => ({}));
+    
+    hasProxy = !!status.hasProxy;
     renderApps(apps);
-    renderHistory(history||[]);
+    renderHistory(history);
     renderWarn(status);
     renderSearch();
-  }catch(e){
-    document.getElementById("appList").innerHTML='<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">加载失败，请刷新重试</div>';
+  } catch (e) {
+    console.error("加载失败:", e);
+    document.getElementById("appList").innerHTML = 
+      '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">加载失败，请刷新重试</div>';
   }
 }
 
-function renderApps(apps){
-  if(!apps||apps.length===0){
-    document.getElementById("appList").innerHTML='<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>';
+// 渲染应用列表
+function renderApps(apps) {
+  const appListEl = document.getElementById("appList");
+  if (!apps || apps.length === 0) {
+    appListEl.innerHTML = '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>';
     return;
   }
-  var cards="";
-  for(var i=0;i<apps.length;i++){
-    var a=apps[i],st=a.status||{};
-    var p=st.last_checked_price,ps=p!==undefined?"$"+p:"-";
-    var ts=fmtUTC(st.last_checked_at),ns=fmtUTC(st.last_notified_at);
-    var lo=p!==undefined&&p>0&&p<a.threshold;
-    var icon=st.icon||"",score=st.scoreText||"",ratings=st.ratings||"",note=a.note||"",dev=st.developer||"";
-    var mm=a.monitor_mode==="change";
+  
+  let cards = "";
+  for (let i = 0; i < apps.length; i++) {
+    const a = apps[i];
+    const st = a.status || {};
+    const p = st.last_checked_price;
+    const ps = p !== undefined ? "$" + p : "-";
+    const ts = fmtUTC(st.last_checked_at);
+    const ns = fmtUTC(st.last_notified_at);
+    const lo = p !== undefined && p > 0 && p < a.threshold;
+    const icon = st.icon || "";
+    const score = st.scoreText || "";
+    const ratings = st.ratings || "";
+    const note = a.note || "";
+    const dev = st.developer || "";
+    const mm = a.monitor_mode === "change";
 
-    cards+='<div class="ac">';
+    // 构建卡片
+    cards += '<div class="ac">';
     // header
-    cards+='<div class="ach">';
-    if(icon){cards+='<img src="'+icon+'" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';}
-    cards+='<div class="acn"><div class="act">'+esc(a.name)+'</div>';
-    if(note){cards+='<div style="font-size:11px;color:#856404;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(note)+'</div>';}
-    cards+='<div class="aci">';
-    if(dev){cards+=esc(dev)+' · ';}
-    cards+=esc(a.id)+'</div></div><span class="bg'+(lo?"":" gy")+'">'+(lo?"低于阈值":"正常")+'</span></div>';
+    cards += '<div class="ach">';
+    if (icon) {
+      cards += '<img src="' + icon + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">';
+    }
+    cards += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
+    if (note) {
+      cards += '<div style="font-size:11px;color:#856404;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(note) + '</div>';
+    }
+    cards += '<div class="aci">';
+    if (dev) {
+      cards += esc(dev) + ' · ';
+    }
+    cards += esc(a.id) + '</div></div><span class="bg' + (lo ? "" : " gy") + '">' + (lo ? "低于阈值" : "正常") + '</span></div>';
     // body
-    cards+='<div class="acb"><div class="g">';
-    cards+='<div class="gi"><div class="gl">当前价格</div><div class="v'+(lo?" gr":"")+'">'+ps+'</div></div>';
-    cards+='<div class="gi"><div class="gl">阈值</div><div class="v">$'+a.threshold+'</div></div>';
-    cards+='<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">'+(score?'<span class="star">★</span> '+esc(score)+' ':"")+(ratings?' <span style="color:var(--m)">|</span> '+esc(ratings):"")+'</div></div>';
-    cards+='<div class="gi"><div class="gl">检查</div><div class="v">'+ts+'</div></div>';
-    cards+='<div class="gi"><div class="gl">通知</div><div class="v">'+ns+'</div></div>';
-    cards+='</div><div class="ar">';
-    cards+='<button class="bs" onclick="editApp(\''+esc(a.id)+'\',\''+esc(a.name)+'\',\''+esc(a.country||"us")+'\','+a.threshold+',\''+esc(note)+'\','+(mm?"true":"false")+')"><span class="mat">edit</span></button>';
-    cards+='<button class="bs br" onclick="removeApp(\''+esc(a.id)+'\')"><span class="mat">delete</span></button>';
-    cards+='</div></div></div>';
+    cards += '<div class="acb"><div class="g">';
+    cards += '<div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div>';
+    cards += '<div class="gi"><div class="gl">阈值</div><div class="v">$' + a.threshold + '</div></div>';
+    cards += '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + 
+             (score ? '<span class="star">★</span> ' + esc(score) + ' ' : "") +
+             (ratings ? ' <span style="color:var(--m)">|</span> ' + esc(ratings) : "") + '</div></div>';
+    cards += '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div>';
+    cards += '<div class="gi"><div class="gl">通知</div><div class="v">' + ns + '</div></div>';
+    cards += '</div><div class="ar">';
+    cards += '<button class="bs" onclick="editApp(\'' + esc(a.id) + "','" + esc(a.name) + "','" + 
+             esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (mm ? "true" : "false") + ')">' +
+             '<span class="mat">edit</span></button>';
+    cards += '<button class="bs br" onclick="removeApp(\'' + esc(a.id) + '\')"><span class="mat">delete</span></button>';
+    cards += '</div></div></div>';
   }
-  document.getElementById("appList").innerHTML=cards;
+  appListEl.innerHTML = cards;
 }
 
-function renderHistory(history){
-  if(!history||history.length===0){
-    document.getElementById("historyList").innerHTML='<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>';
+// 渲染历史记录
+function renderHistory(history) {
+  const historyEl = document.getElementById("historyList");
+  if (!history || history.length === 0) {
+    historyEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>';
     return;
   }
-  var hr="";
-  for(var j=0;j<history.length;j++){
-    var hh=history[j];
-    hr+='<div class="hr"><span class="ht">'+fmtUTC(hh.time)+'</span><span class="hn">'+esc(hh.name)+'</span><span class="hp">$'+hh.price+'</span><span class="bg hb'+(hh.notified?"":" gy")+'">'+(hh.notified?"已通知":"跳过")+'</span></div>';
+  
+  let hr = "";
+  for (let j = 0; j < history.length; j++) {
+    const hh = history[j];
+    hr += '<div class="hr">' +
+          '<span class="ht">' + fmtUTC(hh.time) + '</span>' +
+          '<span class="hn">' + esc(hh.name) + '</span>' +
+          '<span class="hp">$' + hh.price + '</span>' +
+          '<span class="bg hb' + (hh.notified ? "" : " gy") + '">' + (hh.notified ? "已通知" : "跳过") + '</span>' +
+          '</div>';
   }
-  document.getElementById("historyList").innerHTML='<div>'+hr+'</div>';
+  historyEl.innerHTML = '<div>' + hr + '</div>';
 }
 
-function renderWarn(status){
-  var warn=!status.hasSc3?'<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>':"";
-  document.getElementById("warnBox").innerHTML=warn;
+// 渲染警告信息
+function renderWarn(status) {
+  const warnEl = document.getElementById("warnBox");
+  warnEl.innerHTML = !status.hasSc3 ? 
+    '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>' : "";
 }
 
-function renderSearch(){
-  if(!hasProxy){
-    document.getElementById("searchBox").innerHTML="";
+// 渲染搜索框
+function renderSearch() {
+  const searchEl = document.getElementById("searchBox");
+  if (!hasProxy) {
+    searchEl.innerHTML = "";
     return;
   }
-  var html='<div class="cd" id="searchSection"><h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2><div style="display:flex;gap:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px"><span class="mat">search</span></button></div><div id="searchResults"></div></div>';
-  document.getElementById("searchBox").innerHTML=html;
+  searchEl.innerHTML = 
+    '<div class="cd" id="searchSection">' +
+    '<h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2>' +
+    '<div style="display:flex;gap:var(--ss)">' +
+    '<input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" ' +
+    'onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}">' +
+    '<button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px">' +
+    '<span class="mat">search</span></button>' +
+    '</div><div id="searchResults"></div></div>';
 }
 
 // ===== 应用操作 =====
-function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||"",monitor_mode:f.get("monitor_mode")?"change":"threshold"})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}
+async function addApp(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const payload = {
+    app_id: formData.get("app_id"),
+    name: formData.get("name") || "",
+    threshold: parseFloat(formData.get("threshold")),
+    country: formData.get("country"),
+    note: formData.get("note") || "",
+    monitor_mode: formData.get("monitor_mode") ? "change" : "threshold"
+  };
+  
+  await api("/api/apps", { method: "POST", body: JSON.stringify(payload) });
+  show("已添加");
+  setTimeout(() => location.reload(), 800);
+}
 
-function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}
+async function removeApp(id) {
+  if (!confirm("确认删除？")) return;
+  await api("/api/apps", { method: "DELETE", body: JSON.stringify({ app_id: id }) });
+  show("已删除");
+  setTimeout(() => location.reload(), 800);
+}
 
-function editApp(id,n,c,t,nt,mm){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("eMonitorMode").checked=!!mm;document.getElementById("ov").classList.add("s")}
+function editApp(id, n, c, t, nt, mm) {
+  edId = id;
+  document.getElementById("eName").value = n;
+  document.getElementById("eThreshold").value = t;
+  document.getElementById("eCountry").value = c;
+  document.getElementById("eNote").value = nt || "";
+  document.getElementById("eMonitorMode").checked = !!mm;
+  document.getElementById("ov").classList.add("s");
+}
 
-function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}
+function closeEdit() {
+  edId = null;
+  document.getElementById("ov").classList.remove("s");
+}
 
-function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim(),mm=document.getElementById("eMonitorMode").checked;if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt||undefined,monitor_mode:mm?"change":"threshold"};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}
+async function saveEdit() {
+  if (!edId) return;
+  const n = document.getElementById("eName").value.trim();
+  const t = parseFloat(document.getElementById("eThreshold").value);
+  const c = document.getElementById("eCountry").value.trim();
+  const nt = document.getElementById("eNote").value.trim();
+  const mm = document.getElementById("eMonitorMode").checked;
+  
+  if (!n) {
+    show("名称不能为空"); return;
+  }
+  if (isNaN(t) || t <= 0) {
+    show("无效阈值"); return;
+  }
+  
+  const payload = {
+    app_id: edId,
+    name: n,
+    threshold: t,
+    country: c,
+    note: nt || undefined,
+    monitor_mode: mm ? "change" : "threshold"
+  };
+  
+  await api("/api/apps", { method: "PATCH", body: JSON.stringify(payload) });
+  show("已更新");
+  closeEdit();
+  setTimeout(() => location.reload(), 800);
+}
 
-function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}
+async function checkAll() {
+  show("正在检查...");
+  await api("/api/check");
+  show("检查完成");
+  setTimeout(() => location.reload(), 1500);
+}
 
-// ===== 搜索 =====
-async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style='text-align:center;padding:20px;color:var(--m)'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class='sri' onclick='showDetail(\""+r.appId+"\",\""+esc(r.title)+"\",\""+esc(r.icon||"")+"\",\""+esc(r.priceText||(r.free?"免费":""))+"\",\""+esc(r.developer||"")+"\",\""+esc(r.scoreText||"")+"\")'>";if(r.icon){h+="<img src='"+r.icon+"' alt='' onerror='this.style.display=\"none\"'>"}h+="<div class='srd'><div class='srn'>"+r.title+"</div><div class='sra'>"+r.appId+" - "+r.developer+"</div></div><div class='srp'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class='sr'>"+h+"</div>"}catch(e){el.innerHTML="<div style='text-align:center;padding:20px;color:var(--m)'>搜索失败</div>"}}
+// ===== 搜索功能 =====
+async function doSearch() {
+  const q = document.getElementById("searchTerm").value.trim();
+  if (!q) {
+    show("请输入关键词");
+    return;
+  }
+  
+  const el = document.getElementById("searchResults");
+  el.textContent = "搜索中...";
+  
+  try {
+    const d = await api("/api/search?term=" + encodeURIComponent(q));
+    if (!d.results || d.results.length === 0) {
+      el.innerHTML = "<div style='text-align:center;padding:20px;color:var(--m)'>未找到结果</div>";
+      return;
+    }
+    
+    let h = "";
+    for (const r of d.results) {
+      h += '<div class="sri" onclick="showDetail(\'' + r.appId + "','" + esc(r.title) + "','" + 
+           (r.icon || "") + "','" + (r.priceText || (r.free ? "免费" : "")) + "','" + 
+           (r.developer || "") + "','" + (r.scoreText || "") + '\')">';
+      if (r.icon) {
+        h += '<img src="' + r.icon + '" alt="" onerror="this.style.display=\'none\'">';
+      }
+      h += '<div class="srd"><div class="srn">' + r.title + '</div><div class="sra">' + 
+           r.appId + ' - ' + r.developer + '</div></div><div class="srp">' + 
+           (r.priceText || (r.free ? "免费" : "")) + '</div></div>';
+    }
+    el.innerHTML = "<div class='sr'>" + h + "</div>";
+  } catch (e) {
+    el.innerHTML = "<div style='text-align:center;padding:20px;color:var(--m)'>搜索失败</div>";
+  }
+}
 
-function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style='display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)'>";if(icon){h+="<img src='"+icon+"' alt='' style='width:44px;height:44px;border-radius:10px;flex-shrink:0' onerror='this.style.display=\"none\"'>"}h+="<div><div style='font-size:17px;font-weight:700'>"+title+"</div><div style='font-size:11px;color:var(--m);margin-top:1px'>"+id+"</div></div></div>";h+="<div class='g' style='margin-bottom:0'>";h+="<div class='gi' style='padding:10px'><div class='gl'>评分</div><div class='v'><span class='star'>★</span> "+(score||"-")+"</div></div>";h+="<div class='gi' style='padding:10px'><div class='gl'>价格</div><div class='v'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class='gi' style='padding:10px;margin-top:var(--ss)'><div class='gl'>开发者</div><div class='v'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}
+function showDetail(id, title, icon, price, dev, score) {
+  detailData = { id, title };
+  let h = "";
+  h += '<div style="display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)">';
+  if (icon) {
+    h += '<img src="' + icon + '" alt="" style="width:44px;height:44px;border-radius:10px;flex-shrink:0" onerror="this.style.display=\'none\'">';
+  }
+  h += '<div><div style="font-size:17px;font-weight:700">' + title + '</div>' +
+       '<div style="font-size:11px;color:var(--m);margin-top:1px">' + id + '</div></div></div>';
+  h += '<div class="g" style="margin-bottom:0">' +
+       '<div class="gi" style="padding:10px"><div class="gl">评分</div><div class="v"><span class="star">★</span> ' + (score || "-") + '</div></div>' +
+       '<div class="gi" style="padding:10px"><div class="gl">价格</div><div class="v">' + (price || "-") + '</div></div>' +
+       '</div>';
+  if (dev) {
+    h += '<div class="gi" style="padding:10px;margin-top:var(--ss)"><div class="gl">开发者</div><div class="v">' + dev + '</div></div>';
+  }
+  document.getElementById("detailContent").innerHTML = h;
+  document.getElementById("dv").classList.add("s");
+}
 
-function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}
+function closeDetail() {
+  detailData = null;
+  document.getElementById("dv").classList.remove("s");
+}
 
-function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();var nt=document.getElementById("dtNote").value.trim();var mm=document.getElementById("dtMonitorMode").checked;if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us",note:nt||undefined,monitor_mode:mm?"change":"threshold"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}
-
-// ===== 启动 =====
-loadDashboard();
+async function addFromDetail() {
+  if (!detailData) return;
+  const btn = document.getElementById("detailAddBtn");
+  const t = parseFloat(document.getElementById("dtThreshold").value);
+  const c = document.getElementById("dtCountry").value.trim();
+  const nt = document.getElementById("dtNote").value.trim();
+  const mm = document.getElementById("dtMonitorMode").checked;
+  
+  if (isNaN(t) || t <= 0) {
+    show("无效阈值"); return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = "添加中...";
+  
+  try {
+    const payload = {
+      app_id: detailData.id,
+      name: detailData.title,
+      threshold: t,
+      country: c || "us",
+      note: nt || undefined,
+      monitor_mode: mm ? "change" : "threshold"
+    };
+    await api("/api/apps", { method: "POST", body: JSON.stringify(payload) });
+    show("已添加");
+    closeDetail();
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "添加监控";
+  }
+}
 </script>
 </body>
 </html>

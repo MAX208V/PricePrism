@@ -1,14 +1,8 @@
 name = "play-scraper-real-refactor"
 main = "worker/index.js"
 compatibility_date = "2024-02-20"
+
 assets = { directory = "./public" }
-keep_vars = true
-
-# KV 存储（保存应用配置和通知状态）
-[[kv_namespaces]]
-binding = "KV"
-id = "8b89d8b5c511457390f5aee4cce00570"
-
 
 [[d1_databases]]
 binding = "DB"

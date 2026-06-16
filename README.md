@@ -5,99 +5,65 @@
 ## 项目结构
 
 ```
-Cloudflare Worker
-├── Hono Router
-├── KV
-├── Cron
-├── Static Assets
-├── Dashboard SPA
-├── Repository Layer
-├── Service Layer
-├── Notification Layer
-└── Play Scraper Layer
+src/
+├── index.ts                 # 主入口文件
+├── dashboard-handler.ts     # 仪表板处理器
+├── api/                     # API 路由处理器
+│   ├── apps-handler.ts      # 应用管理 API
+│   ├── search-handler.ts    # 搜索 API
+│   ├── check-handler.ts     # 检查 API
+│   └── history-handler.ts   # 历史记录 API
+├── services/                # 业务逻辑层
+│   ├── app-service.ts       # 应用服务
+│   ├── monitor-service.ts   # 监控服务
+│   └── search-service.ts    # 搜索服务
+├── repositories/            # 数据访问层
+│   ├── apps-repository.ts   # 应用数据存储
+│   ├── status-repository.ts # 状态数据存储
+│   └── history-repository.ts# 历史记录存储
+└── dashboard/               # 仪表板组件
+    ├── dashboard-template.ts# HTML 模板和渲染
+    └── dashboard-utils.ts   # 工具函数
 ```
 
-## 功能特性
+## API 接口
 
-- 监控 Google Play 商店中特定应用的价格
-- 当价格下降到预设阈值时发送通知
-- 定时任务：每小时检查一次应用价格
-- 可视化 Web 管理面板
-- 支持配置不同的国家/地区商店
+### 应用管理
+- `GET /api/apps` - 获取所有监控应用
+- `POST /api/apps` - 添加新的监控应用
+- `DELETE /api/apps` - 删除监控应用
+- `PATCH /api/apps` - 更新监控应用
 
-## 技术栈
+### 价格监控
+- `POST /api/check` - 手动触发价格检查
+- `GET /api/history` - 获取通知历史记录
 
-- Cloudflare Workers
-- Hono (轻量级路由器)
-- TypeScript
-- KV Storage
+### 搜索功能
+- `GET /api/search?term=关键词` - 搜索 Google Play 应用
 
-## 开发
+## 环境变量
 
-1. 安装依赖：
-   ```bash
-   npm install
-   ```
+```bash
+# Server酱通知配置
+SC3_UID=
+SC3_SENDKEY=
 
-2. 启动开发服务器：
-   ```bash
-   npm run dev
-   ```
+# Google Play 抓取代理
+SCRAPER_PROXY=
+
+# 备用API地址
+SCRAPER_API=
+```
 
 ## 部署
 
-1. 登录到 Cloudflare：
-   ```bash
-   wrangler login
-   ```
+```bash
+# 安装依赖
+npm install
 
-2. 创建 KV 命名空间：
-   ```bash
-   wrangler kv namespace create DATA
-   ```
+# 本地开发
+npm run dev
 
-3. 部署：
-   ```bash
-   npm run deploy
-   ```
-
-## 项目结构详情
-
-```
-src/
-├── index.ts               # 入口文件
-├── routes/                # 路由控制器
-│   ├── apps.ts           # 应用管理路由
-│   ├── search.ts         # 搜索路由
-│   ├── history.ts        # 历史记录路由
-│   └── system.ts         # 系统路由
-│
-├── services/              # 业务逻辑层
-│   ├── play.service.ts   # Google Play服务
-│   ├── monitor.service.ts # 监控服务
-│   ├── notify.service.ts # 通知服务
-│   └── app.service.ts    # 应用服务
-│
-├── repositories/          # 数据访问层
-│   ├── app.repo.ts       # 应用数据存储
-│   ├── history.repo.ts   # 历史记录存储
-│   └── cache.repo.ts     # 缓存存储
-│
-├── cron/                  # 定时任务
-│   └── monitor.ts        # 价格监控任务
-│
-├── utils/                 # 工具函数
-│   ├── response.ts       # 响应处理
-│   ├── date.ts           # 日期处理
-│   └── validator.ts      # 数据验证
-│
-├── dashboard/             # 管理面板前端
-│   ├── index.html        # 主页面
-│   ├── app.js            # 前端逻辑
-│   ├── api.js            # API客户端
-│   ├── store.js          # 状态管理
-│   └── style.css         # 样式
-│
-└── types/                 # 类型定义
-    └── index.ts          # 接口和类型定义
+# 部署到 Cloudflare
+wrangler deploy
 ```

@@ -1,4 +1,4 @@
-// ==================== 管理面板 HTML 模板 ====================
+// Wise 管理面板 HTML 模板
 
 function fmtUTC(iso) {
   if (!iso) return "-";
@@ -6,34 +6,6 @@ function fmtUTC(iso) {
   var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
   return pad(d.getUTCMonth() + 1) + "/" + pad(d.getUTCDate()) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + " UTC";
 }
-
-var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'
-  + '<div id="detailContent"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">地区</div><input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">备注</div><input class="in" id="dtNote" placeholder="可写备注信息" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><label class="tg"><input type="checkbox" class="tgi" id="dtMonitorMode"><span class="tk"></span> 价格变动时通知</label></div>'
-  + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>'
-  + '</div></div>';
-
-var EDT = '<div id="ov" class="ov" onclick="if(event.target===this)closeEdit()"><div class="md" onclick="event.stopPropagation()"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div><div><label class="tg"><input type="checkbox" class="tgi" id="eMonitorMode"><span class="tk"></span> 价格变动时通知</label></div></div><button class="bp" onclick="saveEdit()" style="margin-top:var(--sm)">保存</button></div></div>';
-
-var SCRIPT = [
-  'var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;',
-  'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
-  'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
-  'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||"",monitor_mode:f.get("monitor_mode")?"change":"threshold"})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
-  'function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}',
-  'function editApp(id,n,c,t,nt,mm){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("eMonitorMode").checked=!!mm;document.getElementById("ov").classList.add("s")}',
-  'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
-  'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim(),mm=document.getElementById("eMonitorMode").checked;if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt,monitor_mode:mm?"change":"threshold"};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
-  'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
-  'async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\\""+r.appId+"\\",\\""+escJs(r.title)+"\\",\\""+escJs(r.icon||"")+"\\",\\""+escJs(r.priceText||(r.free?"免费":""))+"\\",\\""+escJs(r.developer||"")+"\\",\\""+escJs(r.scoreText||"")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}',
-  'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\'").replace(/"/g,"&quot;")}',
-  'function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:44px;height:44px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div><div style=\'font-size:17px;font-weight:700\'>"+title+"</div><div style=\'font-size:11px;color:var(--m);margin-top:1px\'>"+id+"</div></div></div>";h+="<div class=\'g\' style=\'margin-bottom:0\'>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'star\'>\u2605</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'padding:10px;margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}',
-  'function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}',
-  'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',
-].join("");
 
 export function renderHtml(apps, history, hasSc3, hasProxy) {
   var cards = "";
@@ -73,6 +45,31 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
   addForm += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
   addForm += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>';
   addForm += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
+
+  var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'
+    + '<div id="detailContent"></div>'
+    + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
+    + '<div style="margin-top:var(--ss)"><div class="lb">地区</div><input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px"></div>'
+    + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>'
+    + '</div></div>';
+  var EDT = '<div id="ov" class="ov"><div class="md"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div></div><div class="rw" style="margin-top:var(--sm)"><button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button><button class="bp" onclick="saveEdit()" style="flex:1">保存</button></div></div></div>';
+
+  var s = [];
+  s.push('var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;');
+  s.push('function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}');
+  s.push('async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}');
+  s.push('function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country")})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}');
+  s.push('function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}');
+  s.push('function editApp(id,n,c,t,nt){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("ov").classList.add("s")}');
+  s.push('function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}');
+  s.push('function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim();if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c};if(nt){b.note=nt}api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}');
+  s.push('function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}');
+  s.push('async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\\""+r.appId+"\\",\\""+escJs(r.title)+"\\",\\""+escJs(r.icon||"")+"\\",\\""+escJs(r.priceText||(r.free?"免费":""))+"\\",\\""+escJs(r.developer||"")+"\\",\\""+escJs(r.scoreText||"")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}');
+  s.push('function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\'").replace(/"/g,"&quot;")}');
+  s.push('function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:44px;height:44px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div><div style=\'font-size:17px;font-weight:700\'>"+title+"</div><div style=\'font-size:11px;color:var(--m);margin-top:1px\'>"+id+"</div></div></div>";h+="<div class=\'g\' style=\'margin-bottom:0\'>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'star\'>\u2605</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'padding:10px;margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}');
+  s.push('function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}');
+  s.push('function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}');
+  var SCRIPT = s.join("");
 
   var out = '<!DOCTYPE html><html lang="zh-CN"><head>';
   out += '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">';
@@ -123,7 +120,7 @@ export function renderHtml(apps, history, hasSc3, hasProxy) {
   return out;
 }
 
-export function esc(s) {
+function esc(s) {
   if (!s) return "";
   return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }

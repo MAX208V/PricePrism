@@ -1,7 +1,7 @@
 name = "play-scraper-api"
 main = "src/index.ts"
 compatibility_date = "2025-06-01"
-keep_vars = true
+
 # KV 存储（保存应用配置和通知状态）
 [[kv_namespaces]]
 binding = "KV"
@@ -10,7 +10,3 @@ id = "8b89d8b5c511457390f5aee4cce00570"
 # 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
 [triggers]
 crons = ["0 * * * *"]
-
-# 静态资源
-[assets]
-directory = "./src/dashboard"

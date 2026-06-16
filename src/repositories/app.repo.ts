@@ -1,70 +1,69 @@
-export class AppRepository {
-  private KV_NAMESPACE = "apps"
-
+/**
+ * 应用数据访问层
+ */
+export class AppsRepository {
+  private KV_KEY = 'apps'
+  
   constructor(private env: any) {}
-
+  
   /**
-   * 获取应用列表
-   * @returns 应用列表
+   * 获取所有应用
    */
-  async list() {
+  async list(): Promise<any[]> {
     try {
-      const data = await this.env.KV.get(this.KV_NAMESPACE, { type: 'json' })
-      return data || []
-    } catch (error) {
-      console.error('Error getting apps list:', error)
+      const data = await this.env.KV.get(this.KV_KEY, 'json')
+      return Array.isArray(data) ? data : []
+    } catch (err) {
+      console.error('获取应用列表失败:', err)
       return []
     }
   }
-
+  
   /**
-   * 获取单个应用
-   * @param id 应用ID
-   * @returns 应用数据
+   * 根据应用ID获取应用
+   * @param appId Google Play 应用ID
    */
-  async get(id: string) {
+  async getByAppId(appId: string) {
     const apps = await this.list()
-    return apps.find(app => app.id === id)
+    return apps.find(app => app.appId === appId)
   }
-
+  
   /**
    * 创建应用
-   * @param data 应用数据
-   * @returns 创建的应用
+   * @param app 应用对象
    */
-  async create(data: any) {
+  async create(app: any) {
     const apps = await this.list()
-    apps.push(data)
-    await this.env.KV.put(this.KV_NAMESPACE, JSON.stringify(apps))
-    return data
+    apps.push(app)
+    await this.env.KV.put(this.KV_KEY, JSON.stringify(apps))
+    return app
   }
-
+  
   /**
-   * 更新应用
-   * @param id 应用ID
-   * @param data 更新数据
-   * @returns 更新后的应用
+   * 根据应用ID更新应用
+   * @param appId Google Play 应用ID
+   * @param app 应用对象
    */
-  async update(id: string, data: any) {
+  async updateByAppId(appId: string, app: any) {
     const apps = await this.list()
-    const index = apps.findIndex(app => app.id === id)
+    const index = apps.findIndex(item => item.appId === appId)
     
     if (index === -1) {
-      throw new Error('App not found')
+      throw new Error('应用不存在')
     }
     
-    apps[index] = { ...apps[index], ...data }
-    await this.env.KV.put(this.KV_NAMESPACE, JSON.stringify(apps))
-    return apps[index]
+    apps[index] = app
+    await this.env.KV.put(this.KV_KEY, JSON.stringify(apps))
+    return app
   }
-
+  
   /**
-   * 删除应用
-   * @param id 应用ID
+   * 根据应用ID删除应用
+   * @param appId Google Play 应用ID
    */
-  async remove(id: string) {
+  async deleteByAppId(appId: string) {
     const apps = await this.list()
-    const filtered = apps.filter(app => app.id !== id)
-    await this.env.KV.put(this.KV_NAMESPACE, JSON.stringify(filtered))
+    const filtered = apps.filter(app => app.appId !== appId)
+    await this.env.KV.put(this.KV_KEY, JSON.stringify(filtered))
   }
 }

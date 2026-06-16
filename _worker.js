@@ -140,7 +140,8 @@ async function checkApp(app, scraperApi, sc3Uid, sc3Sendkey, env) {
     if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
     else if (price < last) { notified = true; reason = "price_dropped"; }
     else if (price === last) { notified = false; reason = "price_unchanged"; }
-    else { notified = false; reason = }
+    else { notified = false; reason = "price_rose"; }
+  }
   if (notified) {
     const nr = await sendSc3(sc3Uid, sc3Sendkey, name + " 降价啦！", "**" + price + " " + cur + "**，已低于阈值 " + threshold + " " + cur + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + ")");
     status.last_notified_price = price;

@@ -1,134 +1,3 @@
-// ==================== 管理面板 HTML 模板 ====================
-
-function fmtUTC(iso) {
-  if (!iso) return "-";
-  var d = new Date(iso);
-  var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
-  return pad(d.getUTCMonth() + 1) + "/" + pad(d.getUTCDate()) + " " + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + " UTC";
-}
-
-var DTL = '<div id="dv" class="ov" onclick="if(event.target===this)closeDetail()"><div class="md" id="detailMd" onclick="event.stopPropagation()">'
-  + '<div id="detailContent"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">降价阈值 (USD)</div><input class="in" id="dtThreshold" type="number" step="0.01" value="6" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">地区</div><input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><div class="lb">备注</div><input class="in" id="dtNote" placeholder="可写备注信息" style="height:40px;font-size:14px"></div>'
-  + '<div style="margin-top:var(--ss)"><label class="tg"><input type="checkbox" class="tgi" id="dtMonitorMode"><span class="tk"></span> 价格变动时通知</label></div>'
-  + '<button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>'
-  + '</div></div>';
-
-var EDT = '<div id="ov" class="ov" onclick="if(event.target===this)closeEdit()"><div class="md" onclick="event.stopPropagation()"><h2>编辑应用</h2><div style="display:grid;gap:var(--ss)"><div><div class="lb">显示名称</div><input class="in" id="eName"></div><div><div class="lb">备注</div><input class="in" id="eNote" placeholder="可写备注信息"></div><div><div class="lb">降价阈值 (USD)</div><input class="in" id="eThreshold" type="number" step="0.01"></div><div><div class="lb">地区</div><input class="in" id="eCountry"></div><div><label class="tg"><input type="checkbox" class="tgi" id="eMonitorMode"><span class="tk"></span> 价格变动时通知</label></div></div><button class="bp" onclick="saveEdit()" style="margin-top:var(--sm)">保存</button></div></div>';
-
-var SCRIPT = [
-  'var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;',
-  'function show(m){tt.textContent=m;tt.classList.add("s");clearTimeout(ttm);ttm=setTimeout(function(){tt.classList.remove("s")},2500)}',
-  'async function api(p,o){var r=await fetch(p,Object.assign({},o,{headers:{"Content-Type":"application/json"}})),d=await r.json();if(!r.ok){show(d.error||"请求失败");throw new Error(d.error)}return d}',
-  'function addApp(e){e.preventDefault();var f=new FormData(e.target);api("/api/apps",{method:"POST",body:JSON.stringify({app_id:f.get("app_id"),name:f.get("name")||"",threshold:parseFloat(f.get("threshold")),country:f.get("country"),note:f.get("note")||"",monitor_mode:f.get("monitor_mode")?"change":"threshold"})}).then(function(){show("已添加");setTimeout(function(){location.reload()},800)})}',
-  'function removeApp(id){if(!confirm("确认删除？"))return;api("/api/apps",{method:"DELETE",body:JSON.stringify({app_id:id})}).then(function(){show("已删除");setTimeout(function(){location.reload()},800)})}',
-  'function editApp(id,n,c,t,nt,mm){edId=id;document.getElementById("eName").value=n;document.getElementById("eThreshold").value=t;document.getElementById("eCountry").value=c;document.getElementById("eNote").value=nt||"";document.getElementById("eMonitorMode").checked=!!mm;document.getElementById("ov").classList.add("s")}',
-  'function closeEdit(){edId=null;document.getElementById("ov").classList.remove("s")}',
-  'function saveEdit(){if(!edId)return;var n=document.getElementById("eName").value.trim(),t=parseFloat(document.getElementById("eThreshold").value),c=document.getElementById("eCountry").value.trim(),nt=document.getElementById("eNote").value.trim(),mm=document.getElementById("eMonitorMode").checked;if(!n){show("名称不能为空");return}if(isNaN(t)||t<=0){show("无效阈值");return}var b={app_id:edId,name:n,threshold:t,country:c,note:nt,monitor_mode:mm?"change":"threshold"};api("/api/apps",{method:"PATCH",body:JSON.stringify(b)}).then(function(){show("已更新");closeEdit();setTimeout(function(){location.reload()},800)})}',
-  'function checkAll(){show("正在检查...");api("/api/check").then(function(){show("检查完成");setTimeout(function(){location.reload()},1500)})}',
-  'async function doSearch(){var q=document.getElementById("searchTerm").value.trim();if(!q){show("请输入关键词");return}var el=document.getElementById("searchResults");el.textContent="搜索中...";try{var d=await api("/api/search?term="+encodeURIComponent(q));if(!d.results||d.results.length===0){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>未找到结果</div>";return}var h="";for(var i=0;i<d.results.length;i++){var r=d.results[i];h+="<div class=\'sri\' onclick=\'showDetail(\\""+escJs(r.appId)+"\\",\\""+escJs(r.title)+"\\",\\""+escJs(r.icon||"")+"\\",\\""+escJs(r.priceText||(r.free?"免费":""))+"\\",\\""+escJs(r.developer||"")+"\\",\\""+escJs(r.scoreText||"")+"\\")\'>";if(r.icon){h+="<img src=\'"+r.icon+"\' alt=\'\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div class=\'srd\'><div class=\'srn\'>"+r.title+"</div><div class=\'sra\'>"+r.appId+" - "+r.developer+"</div></div><div class=\'srp\'>"+(r.priceText||(r.free?"免费":""))+"</div></div>"}el.innerHTML="<div class=\'sr\'>"+h+"</div>"}catch(e){el.innerHTML="<div style=\'text-align:center;padding:20px;color:var(--m)\'>搜索失败</div>"}}',
-  'function escJs(s){if(!s)return "";return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\'/g,"\\\'").replace(/"/g,"&quot;")}',
-  'function showDetail(id,title,icon,price,dev,score){detailData={id:id,title:title};var h="";h+="<div style=\'display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)\'>";if(icon){h+="<img src=\'"+icon+"\' alt=\'\' style=\'width:44px;height:44px;border-radius:10px;flex-shrink:0\' onerror=\'this.style.display=\\"none\\"\'>"}h+="<div><div style=\'font-size:17px;font-weight:700\'>"+title+"</div><div style=\'font-size:11px;color:var(--m);margin-top:1px\'>"+id+"</div></div></div>";h+="<div class=\'g\' style=\'margin-bottom:0\'>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>评分</div><div class=\'v\'><span class=\'mat\' style=\'font-size:14px;color:#fbbc04;vertical-align:middle\'>star</span> "+(score||"-")+"</div></div>";h+="<div class=\'gi\' style=\'padding:10px\'><div class=\'gl\'>价格</div><div class=\'v\'>"+(price||"-")+"</div></div>";h+="</div>";if(dev){h+="<div class=\'gi\' style=\'padding:10px;margin-top:var(--ss)\'><div class=\'gl\'>开发者</div><div class=\'v\'>"+dev+"</div></div>"}document.getElementById("detailContent").innerHTML=h;document.getElementById("dv").classList.add("s")}',
-  'function closeDetail(){detailData=null;document.getElementById("dv").classList.remove("s")}',
-  'function addFromDetail(){if(!detailData)return;var btn=document.getElementById("detailAddBtn");var t=parseFloat(document.getElementById("dtThreshold").value);var c=document.getElementById("dtCountry").value.trim();var nt=document.getElementById("dtNote").value.trim();var mm=document.getElementById("dtMonitorMode").checked;if(isNaN(t)||t<=0){show("无效阈值");return}btn.disabled=true;btn.textContent="添加中...";api("/api/apps",{method:"POST",body:JSON.stringify({app_id:detailData.id,name:detailData.title,threshold:t,country:c||"us",note:nt||"",monitor_mode:mm?"change":"threshold"})}).then(function(){show("已添加");closeDetail();setTimeout(function(){location.reload()},800)}).catch(function(){btn.disabled=false;btn.textContent="添加监控"})}',
-].join("");
-
-function renderHtml(apps, history, hasSc3, hasProxy) {
-  try {
-    var cards = "";
-    for (var i = 0; i < apps.length; i++) {
-      var a = apps[i], st = a.status || {};
-      var p = st.last_checked_price, ps = p !== undefined ? "$" + p : "-";
-      var ts = fmtUTC(st.last_checked_at), ns = fmtUTC(st.last_notified_at);
-      var cm = a.monitor_mode === "change";
-      var lo = !cm && p !== undefined && p > 0 && p < a.threshold;
-      var icon = st.icon || "", score = st.scoreText || "", ratings = st.ratings || "", note = a.note || "", dev = st.developer || "";
-      var rn = parseInt(ratings, 10), rd = !isNaN(rn) && rn >= 1000 ? (rn / 1000).toFixed(1).replace(/\.0$/, "") + "k" : ratings;
-      var head = '<div class="ach">';
-      if (icon) { head += '<img src="' + esc(icon) + '" alt="" class="aci-icon" onerror="this.style.display=\'none\'">'; }
-      head += '<div class="acn"><div class="act">' + esc(a.name) + '</div>';
-      if (dev) { head += '<div class="aci">' + esc(dev) + '</div>'; }
-      head += '<div class="aci" style="font-size:10px">' + esc(a.id) + '</div></div>';
-      if (lo) { head += '<span class="bg">低于阈值</span>'; }
-      head += '</div>';
-      var sv = (score ? '<span class="mat" style="font-size:14px;color:#fbbc04;vertical-align:middle">star</span> ' + esc(score) + ' ' : "") + (rd ? '<span style="color:var(--m)">|</span> <span class="mat" style="font-size:14px;color:var(--m);vertical-align:middle">bookmark_border</span> ' + esc(rd) : "");
-      var extra;
-      if (note) {
-        extra = '<div class="gi"><div class="gl">评分 / 心愿单</div><div class="v">' + sv + '</div></div><div class="gi"><div class="gl">备注</div><div class="v" style="font-size:12px;color:#856404">' + esc(note) + '</div></div>';
-      } else {
-        extra = '<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">' + sv + '</div></div>';
-      }
-      var mv, mc = "";
-      if (cm) {
-        var initP = st.initial_price;
-        if (p !== undefined && initP !== undefined && p < initP) {
-          mv = "↓ $" + p;
-          mc = " gr";
-        } else {
-          mv = "无变动";
-        }
-      } else {
-        mv = "$" + a.threshold;
-      }
-      var nv;
-      if (st.last_notified_price !== undefined && st.last_notified_price !== null) {
-        if (cm) {
-          nv = "变动 $" + st.last_notified_price;
-        } else {
-          nv = "阈值 $" + st.last_notified_price;
-        }
-      } else {
-        nv = "-";
-      }
-      cards += '<div class="ac">' + head + '<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v' + (lo ? " gr" : "") + '">' + ps + '</div></div><div class="gi"><div class="gl">' + (cm ? "监控" : "阈值") + '</div><div class="v' + mc + '">' + mv + '</div></div>' + extra + '<div class="gi"><div class="gl">检查</div><div class="v">' + ts + '</div></div><div class="gi"><div class="gl">通知</div><div class="v">' + nv + '</div></div></div><div class="ar"><button class="bs" onclick="editApp(' + "'" + esc(a.id) + "','" + esc(a.name) + "','" + esc(a.country || "us") + "'," + a.threshold + ",'" + esc(note) + "'," + (cm ? "true" : "false") + ')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp(' + "'" + esc(a.id) + "'" + ')"><span class="mat">delete</span></button></div></div></div>';
-    }
-    var hr = "";
-    for (var j = 0; j < history.length; j++) {
-      var hh = history[j];
-      hr += '<div class="hr"><span class="ht">' + fmtUTC(hh.time) + '</span><span class="hn">' + esc(hh.name) + '</span><span class="hp">$' + hh.price + '</span><span class="bg hb' + (hh.notified ? "" : " gy") + '">' + (hh.notified ? "已通知" : "跳过") + '</span></div>';
-    }
-    var noApps = apps.length === 0 ? '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">暂无监控应用</div>' : cards;
-    var warn = !hasSc3 ? '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>' : "";
-    var searchBox = hasProxy ? '<div class="cd" id="searchSection"><div class="sh"><span class="st"><span class="mat">monitoring</span>监控价格</span></div><div style="display:flex;gap:var(--ss);margin-top:var(--ss)"><input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key===\'Enter\'){event.preventDefault();doSearch()}"><button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0"><span class="mat">search</span></button></div><div id="searchResults"></div></div>' : "";
-    var addForm = '<div class="cd"><div class="sc-h"><span class="mat">add_box</span><h2>添加应用</h2></div>';
-    addForm += '<form id="af" onsubmit="addApp(event)"><div style="display:grid;gap:var(--ss)">';
-    addForm += '<div><div class="lb">Google Play ID</div><input class="in" name="app_id" placeholder="com.flyersoft.moonreaderp" required></div>';
-    addForm += '<div><div class="lb">显示名称 <span style="color:var(--m);font-weight:400">（可选）</span></div><input class="in" name="name" placeholder="留空自动获取"></div>';
-    addForm += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--ss)"><div><div class="lb">降价阈值 (USD)</div><input class="in" name="threshold" type="number" step="0.01" value="6" required></div><div><div class="lb">地区</div><input class="in" name="country" value="us"></div></div></div>';
-    addForm += '<div><div class="lb">备注</div><input class="in" name="note" placeholder="可写备注信息"></div>';
-    addForm += '<div style="margin-top:4px"><label class="tg"><input type="checkbox" class="tgi" name="monitor_mode"><span class="tk"></span> 价格变动时通知</label></div>';
-    addForm += '<button type="submit" class="bp" style="margin-top:var(--sm)"><span class="mat" style="font-size:20px">add</span>添加监控</button></form></div>';
-    var out = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"><title>Price Monitor</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"><style>';
-    out += ':root{--p:#9fe870;--op:#0e0f0c;--pa:#cdffad;--pp:#e2f6d5;--kd:#163300;--k:#0e0f0c;--b:#454745;--m:#868685;--c:#fff;--s:#e8ebe6;--pos:#2ead4b;--neg:#d03238;--rx:24px;--rm:12px;--rp:9999px;--ss:8px;--sm:12px;--sl:16px;--sxl:24px;--f:Inter,sans-serif}@media(prefers-color-scheme:dark){:root{--p:#9fe870;--op:#e8e6e3;--pa:#2a5a2a;--pp:#1a3a1a;--kd:#cdffad;--k:#e8e6e3;--b:#a0a0a0;--m:#6b6b6b;--c:#1c1c1e;--s:#2c2c2e;--pos:#4ade80;--neg:#f87171}}';
-    out += '*{margin:0;padding:0;box-sizing:border-box}body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}.wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}';
-    out += '.st{display:inline-flex;align-items:center;gap:5px;background:var(--pp);color:var(--kd);padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;width:fit-content}.st .mat{font-size:13px}';
-    out += '.rn{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:6px 18px;border-radius:14px;font-family:var(--f);font-size:13px;font-weight:600;cursor:pointer;border:none;gap:4px;background:var(--s);color:var(--k)}.rn:hover{background:var(--pp);color:#163300}.rn .mat{font-size:16px}';
-    out += '.sc-h{display:flex;align-items:center;gap:var(--ss);margin-bottom:var(--ss)}.sc-h .mat{font-size:22px;color:var(--p)}.sc-h h2{font-size:18px;font-weight:700;letter-spacing:-.02em}.ac{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);overflow:hidden}.ach{display:flex;align-items:center;gap:var(--sm);padding:var(--sl) var(--sl) var(--ss)}.aci-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0}.acn{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}.act{font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aci{font-size:11px;color:var(--m);font-weight:500;word-break:break-all}.acb{padding:0 var(--sl) var(--sl)}';
-    out += '.bg{display:inline-flex;align-items:center;padding:4px 12px;border-radius:var(--rp);font-size:11px;font-weight:700;white-space:nowrap;background:var(--pp);color:#163300}.bg.gy{background:var(--s);color:var(--b)}.g{display:grid;grid-template-columns:1fr 1fr;gap:var(--ss);margin-bottom:var(--sm)}.gi{background:var(--s);border-radius:var(--rm);padding:14px}.gl{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--m);margin-bottom:2px;letter-spacing:.03em}.v{font-size:14px;font-weight:600;word-break:break-all;font-variant-numeric:tabular-nums;color:var(--k)}.v.gr{color:var(--pos)}.ar{display:flex;gap:var(--ss)}';
-    out += '.bs{display:inline-flex;align-items:center;justify-content:center;height:38px;width:38px;border-radius:var(--rp);font-family:var(--f);cursor:pointer;border:none;background:var(--s);color:var(--k)}.bs:hover{background:var(--pp);color:#163300}.bs .mat{font-size:18px}.bs.br .mat{color:var(--neg)}.bp{display:inline-flex;align-items:center;justify-content:center;height:46px;border-radius:var(--rp);font-family:var(--f);font-size:16px;font-weight:600;cursor:pointer;border:none;gap:6px;background:var(--p);color:var(--op);width:100%}.bp:hover{background:var(--pa)}.bp:disabled{opacity:0.5;cursor:default}';
-    out += '.in{width:100%;height:50px;background:var(--c);border:2px solid var(--k);border-radius:var(--rm);padding:0 var(--sl);font-family:var(--f);font-size:16px;color:var(--k);outline:none}.in:focus{border-color:var(--p);box-shadow:0 0 0 3px rgba(159,232,112,.2)}.lb{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--b);margin-bottom:6px;letter-spacing:.03em}.cd{background:var(--c);border-radius:var(--rx);box-shadow:0 4px 24px rgba(14,15,12,.06);padding:var(--sl)}.sh{display:flex;align-items:center;justify-content:space-between}';
-    out += '.tg{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;color:var(--k)}.tg .tgi{display:none}.tg .tk{width:36px;height:20px;background:var(--s);border-radius:10px;position:relative;transition:background .2s;flex-shrink:0}.tg .tk::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;background:var(--m);border-radius:50%;transition:all .2s}.tg .tgi:checked+.tk{background:var(--p)}.tg .tgi:checked+.tk::after{background:var(--k);left:18px}';
-    out += '.hr{display:flex;align-items:center;gap:var(--ss);padding:10px 0;border-bottom:1px solid var(--s);font-size:13px}.hr:last-child{border-bottom:none}.ht{color:var(--m);font-weight:500;white-space:nowrap;min-width:52px;font-variant-numeric:tabular-nums}.hn{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hp{font-weight:700;font-variant-numeric:tabular-nums}.hb{padding:2px 10px;font-size:10px}';
-    out += '.w{background:#fff3cd;color:#856404;border-radius:var(--rm);padding:var(--sm) var(--sl);font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}.tt{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--k);color:var(--p);padding:8px 18px;border-radius:var(--rp);font-size:13px;z-index:10000;opacity:0;transition:opacity .2s;pointer-events:none;font-weight:500}.tt.s{opacity:1}.ft{text-align:center;padding:20px 0;font-size:12px;color:var(--m);font-weight:500}';
-    out += '.mat{font-family:Material Symbols Rounded;font-weight:400;font-style:normal;font-size:18px;display:inline-block;line-height:1;letter-spacing:normal;text-transform:none;white-space:nowrap;word-wrap:normal}';
-    out += '.ov{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:9999;display:none;align-items:center;justify-content:center;padding:var(--sl)}.ov.s{display:flex}.md{background:var(--c);border-radius:var(--rx);width:100%;max-width:400px;padding:var(--sxl);box-shadow:0 8px 40px rgba(14,15,12,.12)}.md h2{font-size:20px;font-weight:900;letter-spacing:-.03em;margin-bottom:var(--sm)}';
-    out += '.sr{margin-top:var(--sm);display:flex;flex-direction:column;gap:var(--ss)}.sri{display:flex;align-items:center;gap:var(--sm);background:var(--s);border-radius:var(--rm);padding:var(--sm);cursor:pointer;transition:background .15s}.sri:hover{background:var(--pp)}.sri img{width:40px;height:40px;border-radius:8px;flex-shrink:0}.sri .srd{flex:1;min-width:0}.sri .srd .srn{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srd .sra{font-size:11px;color:var(--m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sri .srp{font-size:13px;font-weight:600;color:var(--pos);white-space:nowrap}';
-    out += '</style></head><body><div class="wr">';
-    out += warn + searchBox;
-    out += '<div class="sh" style="margin-bottom:var(--ss)"><button class="rn" onclick="checkAll()"><span class="mat">refresh</span> 刷新</button></div>';
-    out += noApps + addForm;
-    out += '<div class="cd"><div class="sh" style="margin-bottom:var(--ss)"><span class="st"><span class="mat">history</span>通知记录</span></div>' + (history.length ? '<div>' + hr + '</div>' : '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">暂无记录</div>') + '</div>';
-    out += '<div class="ft">Cloudflare Workers - Wise Design</div></div>';
-    out += DTL + EDT;
-    out += '<div id="tt" class="tt"></div><script>' + SCRIPT + '</script></body></html>';
-    return out;
-  } catch (e2) {
-    return "RENDER ERR: " + e2.message;
-  }
-}
-
 function esc(s) {
   if (s === null || s === undefined) return "";
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -152,8 +21,9 @@ export default {
     if (path === "/api/status") return handleStatus(env);
     if (path === "/api/search") return handleSearch(request, env);
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
+    // Serve static assets for all other routes
     try {
-      return await handleDashboard(env);
+      return await env.ASSETS.fetch(request);
     } catch (e) {
       return new Response("ERR: " + e.message + "\n" + e.stack, { status: 500, headers: { "Content-Type": "text/plain;charset=utf-8" } });
     }
@@ -183,6 +53,7 @@ async function handleAppsApi(request, env) {
     if (!name && info && info.title) name = info.title;
     if (!name) name = body.app_id;
     const appConfig = { id: body.app_id, name, threshold: body.threshold ?? DEFAULT_THRESHOLD, country, lang, currency: DEFAULT_CURRENCY, created_at: new Date().toISOString(), monitor_mode: body.monitor_mode || "threshold" };
+    if (body.note) appConfig.note = body.note;
     apps.push(appConfig);
     await env.KV.put("config:apps", JSON.stringify(apps));
     if (info) {
@@ -198,7 +69,9 @@ async function handleAppsApi(request, env) {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
     let apps = await getApps(env);
-    apps = apps.filter(a => a.id !== body.app_id);
+    const idx = apps.findIndex(a => a.id === body.app_id);
+    if (idx === -1) return jsonResponse({ error: "App not found" }, 404);
+    apps.splice(idx, 1);
     await env.KV.put("config:apps", JSON.stringify(apps));
     await env.KV.delete("status:" + body.app_id);
     return jsonResponse({ ok: true });
@@ -207,9 +80,16 @@ async function handleAppsApi(request, env) {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
     let apps = await getApps(env);
-    const idx = apps.findIndex(a => a.id === body.app_id);
-    if (idx === -1) return jsonResponse({ error: "App not found" }, 404);
-    for (const key in body) { if (key !== "app_id") apps[idx][key] = body[key]; }
+    const app = apps.find(a => a.id === body.app_id);
+    if (!app) return jsonResponse({ error: "App not found" }, 404);
+    if (body.name !== undefined) app.name = body.name;
+    if (body.threshold !== undefined) app.threshold = body.threshold;
+    if (body.country !== undefined) app.country = body.country;
+    if (body.lang !== undefined) app.lang = body.lang;
+    if (body.note !== undefined) {
+      if (body.note) app.note = body.note; else delete app.note;
+    }
+    if (body.monitor_mode !== undefined) app.monitor_mode = body.monitor_mode;
     await env.KV.put("config:apps", JSON.stringify(apps));
     return jsonResponse({ ok: true });
   }
@@ -219,152 +99,165 @@ async function handleAppsApi(request, env) {
 async function handleHistory(env) { return jsonResponse(await env.KV.get("history", "json") || []); }
 
 async function handleStatus(env) {
-  const apps = await getApps(env);
-  const result = [];
-  for (const app of apps) {
-    const st = await env.KV.get("status:" + app.id, "json") || {};
-    result.push({ ...app, status: st });
-  }
-  return jsonResponse(result);
+  const data = {
+    hasSc3: !!(env.SC3_UID && env.SC3_SENDKEY),
+    hasProxy: !!(env.SCRAPER_PROXY)
+  };
+  return jsonResponse(data);
 }
 
 async function handleSearch(request, env) {
-  const term = new URL(request.url).searchParams.get("term");
+  const url = new URL(request.url);
+  const term = url.searchParams.get("term");
   if (!term) return jsonResponse({ error: "term required" }, 400);
-  const proxy = env.SCRAPER_PROXY;
-  if (!proxy) return jsonResponse({ error: "SCRAPER_PROXY not configured" }, 400);
+  const proxy = env.SCRAPER_PROXY || "";
+  const searchUrl = "https://play-scraper-api.vercel.app/api/search?term=" + encodeURIComponent(term);
   try {
-    const resp = await fetch(proxy + "?method=search&term=" + encodeURIComponent(term) + "&num=10", { headers: { Accept: "application/json" } });
-    const data = await resp.json();
-    if (!data.ok) return jsonResponse({ error: data.error || "search failed" }, 500);
-    return jsonResponse({ ok: true, results: data.data });
-  } catch (e) { return jsonResponse({ error: e.message }, 500); }
+    const res = await fetch(proxy ? proxy + "?url=" + encodeURIComponent(searchUrl) : searchUrl);
+    const data = await res.json();
+    return jsonResponse(data);
+  } catch (e) {
+    return jsonResponse({ error: "Search failed: " + e.message }, 502);
+  }
 }
 
 async function fetchAppInfo(env, appId, country, lang) {
-  const proxy = env.SCRAPER_PROXY;
-  if (proxy) {
-    try {
-      const resp = await fetch(proxy + "?method=app&appId=" + appId + "&country=" + country + "&lang=" + lang);
-      const data = await resp.json();
-      if (data.ok && data.data) {
-        return {
-          price: data.data.price, currency: data.data.currency || "USD",
-          icon: data.data.icon, title: data.data.title,
-          score: data.data.score, scoreText: data.data.scoreText,
-          ratings: data.data.ratings, developer: data.data.developer,
-        };
-      }
-    } catch (e) {}
+  const proxy = env.SCRAPER_PROXY || "";
+  const apiUrl = "https://play-scraper-api.vercel.app/api/app?appId=" + encodeURIComponent(appId) + "&country=" + encodeURIComponent(country) + "&lang=" + encodeURIComponent(lang);
+  try {
+    const res = await fetch(proxy ? proxy + "?url=" + encodeURIComponent(apiUrl) : apiUrl);
+    const data = await res.json();
+    if (!data || data.error) throw new Error(data ? data.error : "No data");
+    return {
+      price: data.price,
+      icon: data.icon,
+      score: data.score,
+      scoreText: data.scoreText,
+      ratings: data.ratings,
+      developer: data.developer,
+      title: data.title
+    };
+  } catch (e) {
+    throw new Error("Failed to fetch app info: " + e.message);
   }
-  const fallbackResp = await fetch((env.SCRAPER_API || SCRAPER_API_DEFAULT) + "?id=" + appId + "&country=" + country + "&lang=" + lang);
-  if (fallbackResp.ok) { const data = await fallbackResp.json(); return { price: data.price, currency: data.currency || "USD" }; }
-  return null;
 }
 
 async function monitorAndNotify(env) {
-  const SCRAPER_API = env.SCRAPER_API || SCRAPER_API_DEFAULT;
-  const SC3_UID = env.SC3_UID;
-  const SC3_SENDKEY = env.SC3_SENDKEY;
-  const PROXY = env.SCRAPER_PROXY;
-  if (!SC3_UID || !SC3_SENDKEY) return { ok: false, error: "Missing SC3_UID or SC3_SENDKEY" };
-  const apps = await getApps(env);
-  if (!apps.length) return { ok: true, message: "No apps configured" };
   const results = [];
+  const apps = await getApps(env);
+  const scraperApi = env.SCRAPER_API || SCRAPER_API_DEFAULT;
+  const proxy = env.SCRAPER_PROXY || "";
+  const sc3Uid = env.SC3_UID || "";
+  const sc3Sendkey = env.SC3_SENDKEY || "";
   for (const app of apps) {
-    try { results.push(await checkApp(app, SCRAPER_API, PROXY, SC3_UID, SC3_SENDKEY, env)); }
-    catch (e) { results.push({ app_id: app.id, name: app.name, ok: false, error: e.message }); }
+    try {
+      const res = await checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env);
+      results.push(res);
+    } catch (e) {
+      results.push({ app: app.id, error: e.message });
+    }
   }
   return { ok: true, results };
 }
 
 async function checkApp(app, scraperApi, proxy, sc3Uid, sc3Sendkey, env) {
-  const { id, name, country, lang, threshold, monitor_mode } = app;
-  let price, cur = "USD", icon, score, scoreText, ratings, developer;
-  if (proxy) {
-    try {
-      const resp = await fetch(proxy + "?method=app&appId=" + id + "&country=" + country + "&lang=" + lang);
-      const data = await resp.json();
-      if (data.ok && data.data) {
-        price = data.data.price; cur = data.data.currency || "USD";
-        icon = data.data.icon; score = data.data.score; scoreText = data.data.scoreText;
-        ratings = data.data.ratings; developer = data.data.developer;
-      }
-    } catch (e) {}
-  }
-  if (price === undefined) {
-    const priceInfo = await fetchPrice(scraperApi, id, country, lang);
-    if (!priceInfo || !priceInfo.ok) return { app_id: id, name, ok: false, error: "fetch_price_failed" };
-    price = priceInfo.price; cur = priceInfo.currency || "USD";
-  }
-  const statusKey = "status:" + id;
-  const status = await env.KV.get(statusKey, "json") || {};
-  if (status.initial_price === undefined) { status.initial_price = price; }
-  status.last_checked_price = price; status.last_checked_at = new Date().toISOString();
-  status.icon = icon || status.icon; status.score = score || status.score;
-  status.scoreText = scoreText || status.scoreText; status.ratings = ratings || status.ratings;
-  status.developer = developer || status.developer;
-  let notified = false, reason = null;
-  if (monitor_mode === "change") {
-    const lastCheck = status.last_checked_price;
-    if (lastCheck !== undefined && lastCheck !== null && lastCheck !== price) {
-      notified = true; reason = "price_changed";
+  const result = { app: app.id, name: app.name };
+  const prevStatus = await env.KV.get("status:" + app.id, "json") || {};
+  const priceInfo = await fetchPrice(scraperApi, app.id, app.country || DEFAULT_COUNTRY, app.lang || DEFAULT_LANG);
+  const price = priceInfo.price;
+  const now = new Date().toISOString();
+  const prevPrice = prevStatus.last_checked_price;
+  const mode = app.monitor_mode || "threshold";
+  let shouldNotify = false;
+  let notifyReason = "";
+
+  if (mode === "change") {
+    if (prevPrice !== undefined && prevPrice !== null && price !== null && price !== undefined && prevPrice !== price) {
+      shouldNotify = true;
+      notifyReason = `price_changed:${prevPrice}->${price}`;
     }
   } else {
-    const below = price > 0 && price < threshold && cur === "USD";
-    if (below) {
-      const last = status.last_notified_price;
-      if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
-      else if (price < last) { notified = true; reason = "price_dropped"; }
-      else if (price === last) { notified = false; reason = "price_unchanged"; }
-      else { notified = false; reason = "price_rose"; }
+    if (price !== null && price !== undefined && price > 0 && price < app.threshold) {
+      if (prevPrice === undefined || prevPrice === null || prevPrice >= app.threshold || price < prevPrice) {
+        shouldNotify = true;
+        notifyReason = `below_threshold:${app.threshold}`;
+      }
     }
   }
-  if (notified) {
-    const title = monitor_mode === "change" ? (name + " 价格变动") : (name + " 降价啦！");
-    const desp = "**" + price + " " + cur + "**" + (monitor_mode === "change" ? "（上次: $" + status.last_checked_price + "）" : "，已低于阈值 " + threshold + " " + cur) + "\n\n应用ID：`" + id + "`\n时间：" + new Date().toISOString() + "\n\n[打开 Google Play](https://play.google.com/store/apps/details?id=" + id + "&hl=" + lang + "&gl=" + country + ")";
-    const nr = await sendSc3(sc3Uid, sc3Sendkey, title, desp);
-    status.last_notified_price = price; status.last_notified_at = new Date().toISOString();
-    await appendHistory(env, { app_id: id, name: name, price: price, threshold: threshold, time: new Date().toISOString(), notified: true });
-    await env.KV.put(statusKey, JSON.stringify(status));
-    return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: true, reason, icon, score, scoreText, ratings, developer, sc3: nr };
+
+  const newStatus = {
+    ...prevStatus,
+    last_checked_price: price,
+    last_checked_at: now,
+    icon: priceInfo.icon || prevStatus.icon,
+    score: priceInfo.score || prevStatus.score,
+    scoreText: priceInfo.scoreText || prevStatus.scoreText,
+    ratings: priceInfo.ratings || prevStatus.ratings,
+    developer: priceInfo.developer || prevStatus.developer,
+  };
+
+  if (shouldNotify && sc3Uid && sc3Sendkey) {
+    try {
+      const title = app.name + (mode === "change" ? " 价格变动" : " 降价提醒");
+      let desp = "应用: " + app.name + " (" + app.id + ")\\n";
+      desp += "地区: " + (app.country || DEFAULT_COUNTRY).toUpperCase() + "\\n";
+      if (mode === "change") {
+        desp += "价格变动: $" + prevPrice + " → $" + price;
+      } else {
+        desp += "当前价格: $" + price + "\\n";
+        desp += "降价阈值: $" + app.threshold;
+      }
+      desp += "\\n\\n监控模式: " + (mode === "change" ? "价格变动通知" : "低于阈值通知");
+      await sendSc3(sc3Uid, sc3Sendkey, title, desp);
+      newStatus.last_notified_at = now;
+      result.notified = true;
+      result.notifyReason = notifyReason;
+    } catch (notifyErr) {
+      result.notifyError = notifyErr.message;
+    }
   }
-  await env.KV.put(statusKey, JSON.stringify(status));
-  return { app_id: id, name, ok: true, price, currency: cur, threshold, notified: false, reason, icon, score, scoreText, ratings, developer };
+
+  const histEntry = { time: now, app: app.id, name: app.name, price, notified: !!result.notified };
+  await appendHistory(env, histEntry);
+
+  await env.KV.put("status:" + app.id, JSON.stringify(newStatus));
+  result.price = price;
+  result.notified = !!result.notified;
+  return result;
 }
 
 async function fetchPrice(api, appId, country, lang) {
-  const resp = await fetch(api + "?id=" + appId + "&country=" + country + "&lang=" + lang, { headers: { Accept: "application/json" } });
-  if (!resp.ok) throw new Error("Vercel " + resp.status);
-  return await resp.json();
+  const url = api + "?appId=" + encodeURIComponent(appId) + "&country=" + encodeURIComponent(country) + "&lang=" + encodeURIComponent(lang);
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!data || data.error) throw new Error(data ? data.error : "No price data");
+  return {
+    price: data.price,
+    icon: data.icon,
+    score: data.score,
+    scoreText: data.scoreText,
+    ratings: data.ratings,
+    developer: data.developer
+  };
 }
 
 async function sendSc3(uid, key, title, desp) {
-  const resp = await fetch("https://" + uid + ".push.ft07.com/send/" + key + ".send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, desp }) });
-  return { status: resp.status, body: await resp.text() };
+  const url = "https://sctapi.ftqq.com/" + uid + ".send?title=" + encodeURIComponent(title) + "&desp=" + encodeURIComponent(desp);
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const data = await res.json();
+  if (data.code !== 0) throw new Error("ServerChan send failed: " + (data.message || data.info || "unknown"));
+  return data;
 }
 
 async function getApps(env) { return await env.KV.get("config:apps", "json") || []; }
 
 async function appendHistory(env, entry) {
-  let h = await env.KV.get("history", "json") || [];
-  h.unshift(entry);
-  if (h.length > HISTORY_MAX) h = h.slice(0, HISTORY_MAX);
-  await env.KV.put("history", JSON.stringify(h));
+  let history = await env.KV.get("history", "json") || [];
+  history.unshift(entry);
+  if (history.length > HISTORY_MAX) history = history.slice(0, HISTORY_MAX);
+  await env.KV.put("history", JSON.stringify(history));
 }
 
 function jsonResponse(data, status) {
   return new Response(JSON.stringify(data), { status: status || 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
-}
-
-async function handleDashboard(env) {
-  var apps = await getApps(env);
-  var list = [];
-  for (var k = 0; k < apps.length; k++) {
-    var app = apps[k];
-    var st = await env.KV.get("status:" + app.id, "json") || {};
-    list.push({ id: app.id, name: app.name, threshold: app.threshold, country: app.country, note: app.note, monitor_mode: app.monitor_mode, status: st });
-  }
-  var history = await env.KV.get("history", "json") || [];
-  return new Response(renderHtml(list, history, !!(env.SC3_UID && env.SC3_SENDKEY), !!(env.SCRAPER_PROXY)), { headers: { "Content-Type": "text/html;charset=utf-8" } });
 }

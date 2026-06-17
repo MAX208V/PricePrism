@@ -26,7 +26,8 @@ export async function handleSearch(request, env) {
     }
 
     try {
-      const response = await fetch(`${scraperApi}/api/apps?q=${encodeURIComponent(term)}`);
+      // 根据facundoolano/google-play-api的标准API格式
+      const response = await fetch(`${scraperApi}/api/apps/?q=${encodeURIComponent(term)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

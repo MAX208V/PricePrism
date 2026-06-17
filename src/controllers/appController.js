@@ -2,7 +2,7 @@
  * Controller for handling app-related API requests
  */
 
-import { getApps, saveApps, getStatus, saveStatus } from '../repositories/kvRepository.js';
+import { getApps, saveApps, getStatus, saveStatus, getHistory } from '../repositories/kvRepository.js';
 import { fetchAppInfo } from '../services/scraperService.js';
 
 /**

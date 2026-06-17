@@ -244,3 +244,5 @@ window.showDetail = showDetail;
 window.closeDetail = closeDetail;
 window.showEdit = showEdit;
 window.closeEdit = closeEdit;
+window.renderAppCards = renderAppCards;
+window.renderHistory = renderHistory;

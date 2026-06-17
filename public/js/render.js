@@ -2,8 +2,6 @@
  * Rendering functions for dynamic UI updates
  */
 
-import { fmtUTC } from '../../src/utils/helpers.js';
-
 // We'll need to reimplement fmtUTC for client-side since we can't import from server modules
 function fmtUTCClient(isoString) {
   if (!isoString) return "-";

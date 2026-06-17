@@ -113,8 +113,8 @@ async function handleSearch(request, env) {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
   if (!term) return jsonResponse({ error: "term required" }, 400);
-  const proxy = env.SCRAPER_PROXY;
-  if (!proxy) return jsonResponse({ error: "SCRAPER_PROXY not configured" }, 503);
+  const proxy = env.SCRAPER_API;
+  if (!proxy) return jsonResponse({ error: "SCRAPER_API not configured" }, 503);
   try {
     const resp = await fetch(proxy + "?method=search&term=" + encodeURIComponent(term) + "&num=10", { headers: { Accept: "application/json" } });
     const data = await resp.json();
@@ -175,7 +175,7 @@ async function monitorAndNotify(env) {
 }
 
 async function fetchAppInfo(env, appId, country, lang) {
-  const proxy = env.SCRAPER_PROXY;
+  const proxy = env.SCRAPER_API;
   if (proxy) {
     const resp = await fetch(proxy + "?method=app&appId=" + appId + "&country=" + country + "&lang=" + lang);
     if (!resp.ok) throw new Error("Proxy fetch failed: " + resp.status);

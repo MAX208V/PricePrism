@@ -28,7 +28,7 @@ let detailData = null;
  * @param {Array} apps - Array of apps with status
  * @returns {void}
  */
-export function renderAppCards(apps) {
+function renderAppCards(apps) {
   const container = document.getElementById('appList');
   
   if (apps.length === 0) {
@@ -111,7 +111,7 @@ export function renderAppCards(apps) {
  * @param {Array} history - History entries
  * @returns {void}
  */
-export function renderHistory(history) {
+function renderHistory(history) {
   const container = document.getElementById('historyList');
   
   if (history.length === 0) {
@@ -145,7 +145,7 @@ export function renderHistory(history) {
  * @param {string} score - Score text
  * @returns {void}
  */
-export function showDetail(id, title, icon, price, dev, score) {
+function showDetail(id, title, icon, price, dev, score) {
   detailData = { id, title };
   
   let contentHTML = `
@@ -179,7 +179,7 @@ export function showDetail(id, title, icon, price, dev, score) {
  * Close detail modal
  * @returns {void}
  */
-export function closeDetail() {
+function closeDetail() {
   detailData = null;
   document.getElementById('dv').classList.remove('s');
 }
@@ -194,7 +194,7 @@ export function closeDetail() {
  * @param {string} monitorMode - Monitor mode
  * @returns {void}
  */
-export function showEdit(id, name, country, threshold, note, monitorMode) {
+function showEdit(id, name, country, threshold, note, monitorMode) {
   document.getElementById('eName').value = name;
   document.getElementById('eThreshold').value = threshold;
   document.getElementById('eCountry').value = country;
@@ -209,7 +209,7 @@ export function showEdit(id, name, country, threshold, note, monitorMode) {
  * Close edit modal
  * @returns {void}
  */
-export function closeEdit() {
+function closeEdit() {
   window.edId = null;
   document.getElementById('ov').classList.remove('s');
 }
@@ -241,3 +241,10 @@ function escapeJs(str) {
 
 // No longer need to add functions to window object since we're using proper exports
 // The export statements at the end of the file are sufficient
+// Make all functions globally available
+window.renderAppCards = renderAppCards;
+window.renderHistory = renderHistory;
+window.showDetail = showDetail;
+window.closeDetail = closeDetail;
+window.showEdit = showEdit;
+window.closeEdit = closeEdit;

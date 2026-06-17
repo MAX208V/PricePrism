@@ -2,8 +2,8 @@
  * Main application entry point
  */
 
-import { getApps, addApp, editApp, deleteApp, checkAll, search } from './api.js';
-import { renderAppCards, renderHistory, closeDetail, closeEdit, showEdit } from './render.js';
+// 从window对象获取所需函数而不是使用import
+const { getApps, addApp, editApp, deleteApp, checkAll, search } = window;
 
 // Global variables
 let edId = null; // For tracking which app is being edited
@@ -50,19 +50,8 @@ async function loadData() {
     const hasProxy = data.hasProxy || false;
     
     // Render data
-    if (typeof window.renderAppCards === 'function') {
-      window.renderAppCards(apps);
-    } else {
-      console.error('renderAppCards function not available');
-      document.getElementById('appList').innerHTML = '<div class="cd" style="text-align:center;padding:32px;color:var(--r);font-weight:500;font-size:14px">渲染错误: 函数未定义</div>';
-    }
-    
-    if (typeof window.renderHistory === 'function') {
-      window.renderHistory(history);
-    } else {
-      console.error('renderHistory function not available');
-      document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--r);font-weight:500;font-size:14px">渲染错误: 函数未定义</div>';
-    }
+    window.renderAppCards(apps);
+    window.renderHistory(history);
     
     // Show/hide warning section based on SC3 configuration
     const warningSection = document.getElementById('warning-section');

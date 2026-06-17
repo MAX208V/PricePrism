@@ -1,28 +1,19 @@
-# Play Scraper API - Cloudflare Workers Configuration
-# Architecture: Workers + KV + Cron + Assets
-
+# wrangler.toml
 name = 'play-scraper-api'
 main = "_worker.js"
 compatibility_date = "2024-02-20"
-compatibility_flags = ["nodejs_compat"]
 keep_vars = true
 
-# ================== Assets (Static Files) ==================
-# Serve frontend static files
-[site]
-bucket = "./public"
-
-# ================== KV Namespaces ==================
+# KV 存储（保存应用配置和通知状态）
 [[kv_namespaces]]
 binding = "KV"
 id = "8b89d8b5c511457390f5aee4cce00570"
 
-# ================== Cron Triggers ==================
-# Run price check every hour
+# 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
 [triggers]
 crons = ["0 * * * *"]
 
-# ================== Environment Variables ==================
-# Set these via wrangler secret put:
-# - SC3_KEY: ServerChan3 notification key
-# - PROXY_URL: CORS proxy URL for search functionality
+# 静态资源配置 - 托管前端 HTML
+[assets]
+directory = "public"
+binding = "ASSETS"

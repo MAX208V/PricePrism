@@ -1,80 +1,100 @@
 # Play Scraper API
 
-监控 Google Play 商店特定应用价格并提醒。
+Google Play 应用价格监控服务，基于 Cloudflare Workers + KV + Cron + Assets 架构。
 
 ## 架构
 
-**Cloudflare Workers + KV + Cron + Assets**
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Cloudflare Workers                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  _worker.js │  │  KV Store   │  │  Cron Trigger       │  │
-│  │  API Routes │  │  App Data   │  │  Hourly Price Check │  │
-│  └─────────────┘  │  History    │  └─────────────────────┘  │
-│                   │  Config     │                           │
-│                   └─────────────┘                           │
-│                          │                                  │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Assets (Static Files)                  │    │
-│  │         public/index.html  (Dashboard UI)           │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Cloudflare Workers                    │
+├─────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
+│  │   Assets    │  │    API      │  │   Cron Jobs     │  │
+│  │  (静态HTML) │  │  (_worker)  │  │ (定时检查价格)  │  │
+│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │
+│         │                │                   │          │
+│         │                ▼                   │          │
+│         │        ┌─────────────┐             │          │
+│         │        │  KV Store   │◄────────────┘          │
+│         │        │ (应用配置)  │                        │
+│         │        │ (价格状态)  │                        │
+│         │        │ (通知历史)  │                        │
+│         │        └─────────────┘                        │
+└─────────┴───────────────────────────────────────────────┘
 ```
 
-## 项目结构
+## 目录结构
 
 ```
 play-scraper-api/
-├── _worker.js           # Worker 入口 (API 路由 & Cron)
-├── wrangler.toml        # Cloudflare 配置
 ├── public/
-│   └── index.html       # Dashboard 前端UI (静态页面)
-└── README.md            # 本文件
+│   └── index.html      # 前端静态页面 (Cloudflare Assets 托管)
+├── _worker.js          # Workers 入口 (API + 定时任务)
+├── wrangler.toml       # Cloudflare 配置
+└── README.md
 ```
+
+## API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/dashboard` | GET | 获取仪表盘数据 (apps, history, 配置状态) |
+| `/api/apps` | GET | 获取所有监控应用列表 |
+| `/api/apps` | POST | 添加新应用到监控列表 |
+| `/api/apps` | PATCH | 更新应用配置 |
+| `/api/apps` | DELETE | 删除应用 |
+| `/api/check` | GET | 手动触发价格检查 |
+| `/api/history` | GET | 获取通知历史记录 |
+| `/api/status` | GET | 获取所有应用状态 |
+| `/api/search` | GET | 搜索 Google Play 应用 |
+
+## 环境变量
+
+在 Cloudflare Dashboard 中配置：
+
+| 变量 | 说明 |
+|------|------|
+| `SC3_UID` | Server酱推送 UID |
+| `SC3_SENDKEY` | Server酱推送 SendKey |
+| `SCRAPER_PROXY` | Google Play 代理服务地址 |
+| `SCRAPER_API` | 备用爬虫 API (可选) |
 
 ## 部署
 
 ```bash
-# 1. 安装 Wrangler
-echo "你的Cloudflare API Token" | wrangler login
+# 安装 Wrangler CLI
+npm install -g wrangler
 
-# 2. 设置 Secrets
-wrangler secret put SC3_KEY
-wrangler secret put PROXY_URL
+# 登录 Cloudflare
+wrangler login
 
-# 3. 部署
+# 部署
 wrangler deploy
 ```
 
-## 环境变量
+## 本地开发
 
-| 变量名 | 说明 |
-|--------|------|
-| `SC3_KEY` | ServerChan3 通知密钥 |
-| `PROXY_URL` | CORS代理地址 (用于搜索功能) |
+```bash
+# 启动本地开发服务器
+wrangler dev
 
-## API 端点
+# 访问 http://localhost:8787
+```
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | Dashboard 页面 |
-| GET | `/api/dashboard` | 获取 Dashboard 数据 |
-| GET | `/api/apps` | 列出所有监控应用 |
-| POST | `/api/apps` | 添加应用 |
-| DELETE | `/api/apps` | 删除应用 |
-| PATCH | `/api/apps` | 更新应用 |
-| POST | `/api/check` | 手动触发价格检查 |
-| GET | `/api/search?term=xxx` | 搜索应用 |
+## 前端架构
 
-## 定时任务
+前端采用纯静态 HTML，页面加载后通过 JavaScript 调用 `/api/dashboard` 获取数据并渲染：
 
-每小时自动检查一次所有应用的价格。
+1. **`public/index.html`** - 包含完整的 HTML/CSS/JavaScript
+2. 前端通过 `fetch()` 调用 API 端点
+3. Cloudflare Assets 自动处理静态资源缓存
 
-## 技术栈
+## 通知功能
 
-- **Backend**: Cloudflare Workers + KV
-- **Cron**: 价格检查定时任务
-- **Assets**: 静态 HTML Dashboard (无框架, 原生JS)
-- **通知**: ServerChan3
+- 支持降价阈值通知 (monitor_mode: "threshold")
+- 支持价格变动通知 (monitor_mode: "change")
+- 通过 Server酱 (push.ft07.com) 发送推送
+
+## License
+
+MIT

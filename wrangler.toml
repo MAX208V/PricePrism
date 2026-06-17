@@ -1,5 +1,5 @@
 # wrangler.toml
-name = 'play-scraper-api'
+name = 'PricePrism'
 main = "_worker.js"
 compatibility_date = "2024-02-20"
 keep_vars = true

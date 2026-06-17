@@ -29,8 +29,8 @@ async function api(path, options = {}) {
 }
 
 /**
- * Get all apps with their statuses
- * @returns {Promise<Array>} Array of apps with status
+ * Get all apps with their statuses and additional data
+ * @returns {Promise<object>} Object containing apps, history, and config status
  */
 export async function getApps() {
   return await api('/apps');
@@ -89,12 +89,4 @@ export async function checkAll() {
  */
 export async function search(term) {
   return await api(`/search?term=${encodeURIComponent(term)}`);
-}
-
-/**
- * Get notification history
- * @returns {Promise<Array>} History entries
- */
-export async function getHistory() {
-  return await api('/history');
 }

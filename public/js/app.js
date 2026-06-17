@@ -40,23 +40,24 @@ async function loadData() {
     document.getElementById('appList').innerHTML = '<div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">加载中...</div>';
     document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">加载中...</div>';
     
-    // Fetch data in parallel
-    const [apps, history] = await Promise.all([
-      getApps(),
-      getHistory()
-    ]);
+    // Fetch all data from single API endpoint
+    const data = await getApps();
+    
+    // Extract apps and history from response
+    const apps = data.apps || [];
+    const history = data.history || [];
+    const hasSc3 = data.hasSc3 || false;
+    const hasProxy = data.hasProxy || false;
     
     // Render data
     renderAppCards(apps);
     renderHistory(history);
     
-    // Check if SC3 is configured (this would require a new API endpoint)
-    // For now we'll just hide the warning section
-    document.getElementById('warning-section').style.display = 'none';
+    // Show/hide warning section based on SC3 configuration
+    document.getElementById('warning-section').style.display = hasSc3 ? 'none' : 'block';
     
-    // Check if proxy is configured (would also need new API endpoint)
-    // For now we'll show the search section by default
-    document.getElementById('searchSection').style.display = 'block';
+    // Show/hide search section based on proxy configuration
+    document.getElementById('searchSection').style.display = hasProxy ? 'block' : 'none';
   } catch (error) {
     showToast('加载数据失败: ' + error.message);
     console.error('Failed to load data:', error);

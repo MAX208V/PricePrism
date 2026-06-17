@@ -13,10 +13,31 @@ export async function getApps(env) {
   
   // Convert object format to array format if needed
   if (typeof appsData === 'object' && !Array.isArray(appsData)) {
-    return Object.values(appsData);
+    // Old format: {[appId]: appData}
+    const appsArray = Object.values(appsData).map(app => {
+      // Ensure app has the correct structure
+      if (!app.app_id && app.id) {
+        // Fix field name if needed
+        return {...app, app_id: app.id};
+      }
+      return app;
+    });
+    return appsArray;
   }
   
-  return Array.isArray(appsData) ? appsData : [];
+  // New format: array of apps
+  if (Array.isArray(appsData)) {
+    return appsData.map(app => {
+      // Ensure app has the correct structure
+      if (!app.app_id && app.id) {
+        // Fix field name if needed
+        return {...app, app_id: app.id};
+      }
+      return app;
+    });
+  }
+  
+  return [];
 }
 
 /**
@@ -26,10 +47,23 @@ export async function getApps(env) {
  * @returns {Promise<void>}
  */
 export async function saveApps(env, apps) {
-  // Convert array back to object format for backward compatibility
+  // Convert to object format for backward compatibility
   const appsObj = {};
   apps.forEach(app => {
-    appsObj[app.app_id] = app;
+    // Ensure app has required fields
+    const appWithDefaults = {
+      id: app.id || crypto.randomUUID(),
+      app_id: app.app_id || app.id,
+      name: app.name || '',
+      threshold: app.threshold || 0,
+      country: app.country || 'us',
+      note: app.note || '',
+      monitor_mode: app.monitor_mode || 'threshold',
+      created_at: app.created_at || Date.now(),
+      updated_at: Date.now(),
+      ...app
+    };
+    appsObj[appWithDefaults.app_id] = appWithDefaults;
   });
   await env.KV.put("apps", JSON.stringify(appsObj));
 }
@@ -41,8 +75,25 @@ export async function saveApps(env, apps) {
  * @returns {Promise<Object>} App status
  */
 export async function getStatus(env, appId) {
-  const statusStr = await env.KV.get(`status:${appId}`);
-  return statusStr ? JSON.parse(statusStr) : {};
+  // Try to get status with new format
+  let statusStr = await env.KV.get(`status:${appId}`);
+  
+  // If not found, try alternative keys that might exist in old format
+  if (!statusStr) {
+    statusStr = await env.KV.get(`status_${appId}`);
+  }
+  
+  if (!statusStr) {
+    return {};
+  }
+  
+  try {
+    const status = JSON.parse(statusStr);
+    return status || {};
+  } catch (e) {
+    console.error('Failed to parse status for app:', appId, e);
+    return {};
+  }
 }
 
 /**
@@ -63,7 +114,15 @@ export async function saveStatus(env, appId, status) {
  */
 export async function getHistory(env) {
   const historyStr = await env.KV.get("history");
-  return historyStr ? JSON.parse(historyStr) : [];
+  if (!historyStr) return [];
+  
+  try {
+    const history = JSON.parse(historyStr);
+    return Array.isArray(history) ? history : [];
+  } catch (e) {
+    console.error('Failed to parse history', e);
+    return [];
+  }
 }
 
 /**

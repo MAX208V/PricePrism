@@ -27,10 +27,9 @@
       --sl:16px;
       --sxl:24px;
       --f:Inter,sans-serif;
-	  --url-base: "";
     }
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh;}
+    body{font-family:var(--f);font-size:16px;color:var(--k);background:var(--s);display:flex;justify-content:center;padding:var(--sl);min-height:100dvh}
     .wr{width:100%;max-width:480px;display:flex;flex-direction:column;gap:var(--sm);margin-top:var(--ss);padding-bottom:40px}
     .brd{display:flex;align-items:center;gap:var(--sm);margin-bottom:4px}.brd-i{width:36px;height:36px;background:var(--p);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--op);flex-shrink:0}.brd-i .mat{font-size:20px}
     h1{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1.1}.sb{font-size:13px;color:var(--m);margin-top:2px;font-weight:500}
@@ -139,6 +138,7 @@
     <div class="ft">Cloudflare Workers · Wise Design</div>
   </div>
   
+  <!-- Detail Modal -->
   <div id="dv" class="ov" onclick="if(event.target===this)closeDetail()">
     <div class="md" id="detailMd" onclick="event.stopPropagation()">
       <div id="detailContent"></div>
@@ -164,6 +164,7 @@
     </div>
   </div>
   
+  <!-- Edit Modal -->
   <div id="ov" class="ov" onclick="if(event.target===this)closeEdit()">
     <div class="md" onclick="event.stopPropagation()">
       <h2>编辑应用</h2>
@@ -198,10 +199,10 @@
   <div id="tt" class="tt"></div>
 
   <script>
-    // 初始化所有事件监听器和变量
+    // Initialize variables
     var tt=document.getElementById("tt"),ttm,edId=null,detailData=null;
 
-    // 公共函数
+    // Utility functions
     function fmtUTC(iso) {
       if (!iso) return "-";
       var d = new Date(iso);
@@ -226,7 +227,7 @@
       return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }
 
-    // API 函数
+    // API functions
     async function api(p,o){
       var r=await fetch(p,Object.assign({},o,{
         headers:{"Content-Type":"application/json"}})),
@@ -238,7 +239,7 @@
       return d
     }
 
-    // 应用相关的函数
+    // App functions
     function addApp(e){
       e.preventDefault();
       var f=new FormData(e.target);
@@ -322,7 +323,7 @@
            setTimeout(function(){location.reload()},1500)})
     }
 
-    // 搜索功能
+    // Search functions
     async function doSearch(){
       var q=document.getElementById("searchTerm").value.trim();
       if(!q){
@@ -356,7 +357,7 @@
       }
     }
 
-    // 详情弹窗相关
+    // Detail modal functions
     function showDetail(id,title,icon,price,dev,score){
       detailData={id:id,title:title};
       var h="";
@@ -417,21 +418,21 @@
            btn.textContent="添加监控"})
     }
 
-    // 页面加载完成后初始化数据
+    // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
-      // 获取并渲染监控应用列表
+      // Load apps and history data
       api("/api/apps")
          .then(function(data){
            renderApps(data.apps);
            renderHistory(data.history);
            
-           // 处理警告部分
+           // Handle warning section
            var warnSection = document.getElementById("warningSection");
            if (!data.hasSc3) {
              warnSection.innerHTML = '<div class="w"><span class="mat" style="font-size:16px">warning</span> 未配置通知</div>';
            }
            
-           // 处理搜索区域显示
+           // Handle search section visibility
            var searchSection = document.getElementById("searchSection");
            if (!data.hasProxy) {
              searchSection.style.display = "none";

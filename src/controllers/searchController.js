@@ -2,8 +2,6 @@
  * Controller for handling search-related API requests
  */
 
-import { fetchAppInfo } from '../services/scraperService.js';
-
 /**
  * Handle GET /api/search - Search for apps
  * @param {Request} request - The incoming request
@@ -26,17 +24,34 @@ export async function handleSearch(request, env) {
     }
 
     try {
-      // 根据facundoolano/google-play-api的标准API格式
-      const response = await fetch(`${scraperApi}/api/apps/?q=${encodeURIComponent(term)}`);
+      // 使用您的GooglePlayScraper_api的proxy端点进行搜索
+      const response = await fetch(`${scraperApi}/api/proxy?method=search&term=${encodeURIComponent(term)}&num=20`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
-      return new Response(JSON.stringify(data), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const result = await response.json();
+      
+      // 转换为前端期望的格式
+      if (result.ok && Array.isArray(result.data)) {
+        // 将搜索结果转换为前端期望的格式
+        const transformedResults = result.data.map(item => ({
+          appId: item.appId,
+          title: item.title,
+          icon: item.icon,
+          developer: item.developer,
+          priceText: item.priceText,
+          free: item.free,
+          scoreText: item.scoreText
+        }));
+        
+        return new Response(JSON.stringify({ results: transformedResults }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else {
+        throw new Error(result.error || 'Failed to parse search results');
+      }
     } catch (error) {
       console.error('Failed to search apps:', error);
       return new Response(JSON.stringify({ error: 'Failed to search apps' }), { status: 500 });

@@ -31,29 +31,13 @@ function formatTime(iso) {
 
 // ==================== Price Display ====================
 function getPriceDisplay(r) {
-  if (!r) return { text: '-', isFree: false, isBelow: false };
-  
-  const isFree = r.free === true || r.price === 0;
-  
-  if (isFree) {
-    const ads = r.containsAds === true;
-    const iap = r.offersIAP === true;
-    let text = '免费';
-    if (ads && iap) text = '免费(含广告+内购)';
-    else if (ads) text = '免费(含广告)';
-    else if (iap) text = '免费(含内购)';
-    return { text, isFree: true, isBelow: false };
-  }
-  
+  if (!r) return { text: '-', isFree: false };
+  const isFree = r.free === true || r.price === 0 || r.price === '0';
+  if (isFree) return { text: '免费', isFree: true };
   if (r.price !== undefined && r.price !== null && r.price !== 0) {
-    return { 
-      text: '$' + parseFloat(r.price).toFixed(2), 
-      isFree: false,
-      isBelow: false
-    };
+    return { text: '$' + parseFloat(r.price).toFixed(2), isFree: false };
   }
-  
-  return { text: '-', isFree: false, isBelow: false };
+  return { text: '-', isFree: false };
 }
 
 // ==================== Escape HTML ====================
@@ -82,57 +66,51 @@ async function loadDashboard() {
 function renderApps(apps) {
   const container = document.getElementById('appsList');
   const countEl = document.getElementById('appsCount');
-  
   countEl.textContent = apps ? apps.length : 0;
-  
+
   if (!apps || apps.length === 0) {
     container.innerHTML = '<div class="empty-state">暂无监控应用</div>';
     return;
   }
 
   container.innerHTML = apps.map(app => {
-    const status = app.status || {};
-    const price = status.last_checked_price;
-    const isFree = status.last_checked_free;
-    
-    const priceInfo = getPriceDisplay({ 
-      free: isFree, 
-      price, 
-      containsAds: status.containsAds, 
-      offersIAP: status.offersIAP 
-    });
-    
+    const st = app.status || {};
+    const price = st.last_checked_price;
+    const isFree = st.last_checked_free;
+    const priceInfo = getPriceDisplay({ free: isFree, price });
     const threshold = app.threshold;
-    const isBelowThreshold = !isFree && !app.monitor_mode && price !== undefined && price > 0 && price < threshold;
+    const isBelow = !isFree && !app.monitor_mode && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
-    
-    const icon = status.icon || '';
-    const score = status.scoreText || '';
-    
-    return `
-      <div class="app-card">
-        ${icon ? `<img src="${escapeHtml(icon)}" class="app-icon" onerror="this.style.display='none'">` : '<div class="app-icon"></div>'}
-        <div class="app-name">${escapeHtml(app.name)}</div>
-        <div class="app-meta">
-          <span>${escapeHtml(app.id)}</span>
-          ${score ? `<span>★ ${escapeHtml(score)}</span>` : ''}
-          ${isBelowThreshold ? '<span class="badge badge--success">低于阈值</span>' : ''}
-          ${isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : ''}
-        </div>
-        <div class="app-price">
-          <div class="app-price-value${isBelowThreshold ? ' success' : ''}">${priceInfo.text}</div>
-          <div class="app-price-label">${isChangeMode ? '变动通知' : '阈值 $' + threshold}</div>
-        </div>
-        <div class="app-actions">
-          <button class="btn btn-icon" onclick="openEditModal('${escapeHtml(app.id)}', '${escapeHtml(app.name)}', '${escapeHtml(app.country || 'us')}', ${threshold}, '${escapeHtml(app.note || '')}', ${isChangeMode})" title="编辑">
-            <span class="material-symbols-rounded">edit</span>
-          </button>
-          <button class="btn btn-icon danger" onclick="deleteApp('${escapeHtml(app.id)}')" title="删除">
-            <span class="material-symbols-rounded">delete</span>
-          </button>
-        </div>
-      </div>
-    `;
+    const icon = st.icon || '';
+    const score = st.scoreText || '';
+    const note = app.note || '';
+
+    const html = [
+      '<div class="app-card">',
+        '<div class="app-card-main">',
+          icon ? '<img src="' + escapeHtml(icon) + '" class="app-card-icon" onerror="this.style.display=\'none\'">' : '<div class="app-card-icon"></div>',
+          '<div class="app-card-body">',
+            '<div class="app-card-name">' + escapeHtml(app.name) + '</div>',
+            '<div class="app-card-meta">',
+              '<span>' + escapeHtml(app.id) + '</span>',
+              score ? '<span>★ ' + escapeHtml(score) + '</span>' : '',
+              isBelow ? '<span class="badge badge--success">低于阈值</span>' : '',
+              isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '',
+            '</div>',
+          '</div>',
+          '<div class="app-card-right">',
+            '<div class="app-card-price' + (isBelow ? ' success' : '') + '">' + priceInfo.text + '</div>',
+            '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : '阈值 $' + threshold) + '</div>',
+          '</div>',
+        '</div>',
+        note ? '<div class="app-card-note"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-right:4px;">sticky_note_2</span>' + escapeHtml(note) + '</div>' : '',
+        '<div class="app-card-actions">',
+          '<button class="btn btn-icon" onclick="openEditModal(\'' + escapeHtml(app.id) + '\',\'' + escapeHtml(app.name) + '\',\'' + escapeHtml(app.country || 'us') + '\',' + threshold + ',\'' + escapeHtml(note) + '\',' + isChangeMode + ')"><span class="material-symbols-rounded">edit</span></button>',
+          '<button class="btn btn-icon" onclick="deleteApp(\'' + escapeHtml(app.id) + '\')" style="color:var(--negative)"><span class="material-symbols-rounded">delete</span></button>',
+        '</div>',
+      '</div>'
+    ].join('');
+    return html;
   }).join('');
 }
 
@@ -140,22 +118,21 @@ function renderApps(apps) {
 function renderHistory(history) {
   const container = document.getElementById('historyList');
   const countEl = document.getElementById('historyCount');
-  
   countEl.textContent = history ? history.length : 0;
-  
+
   if (!history || history.length === 0) {
     container.innerHTML = '<div class="empty-state">暂无记录</div>';
     return;
   }
 
-  container.innerHTML = history.map(h => `
-    <div class="history-item">
-      <span class="history-time">${formatTime(h.time)}</span>
-      <span class="history-name">${escapeHtml(h.name)}</span>
-      <span class="history-price">$${h.price}</span>
-      <span class="history-badge history-badge--${h.notified ? 'notified' : 'skipped'}">${h.notified ? '已通知' : '跳过'}</span>
-    </div>
-  `).join('');
+  container.innerHTML = history.map(h => {
+    return '<div class="history-item">' +
+      '<span class="history-time">' + formatTime(h.time) + '</span>' +
+      '<span class="history-name">' + escapeHtml(h.name) + '</span>' +
+      '<span class="history-price">$' + h.price + '</span>' +
+      '<span class="history-badge history-badge--' + (h.notified ? 'notified' : 'skipped') + '">' + (h.notified ? '已通知' : '跳过') + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 // ==================== Search ====================
@@ -168,6 +145,7 @@ async function doSearch() {
 
   const resultsEl = document.getElementById('searchResults');
   resultsEl.innerHTML = '<div class="loading">搜索中...</div>';
+  resultsEl.classList.add('visible');
 
   try {
     const data = await api('/api/search?term=' + encodeURIComponent(term));
@@ -177,36 +155,30 @@ async function doSearch() {
     }
 
     resultsEl.innerHTML = data.results.map(r => {
-      const priceInfo = getPriceDisplay(r);
-      return `
-        <div class="search-item" onclick="showDetail('${escapeHtml(r.appId)}', '${escapeHtml(r.title)}', '${escapeHtml(r.icon || '')}', '${priceInfo.text}', ${r.free || false}, ${r.price || 0})">
-          ${r.icon ? `<img src="${escapeHtml(r.icon)}" class="search-item-icon" onerror="this.style.display='none'">` : '<div class="search-item-icon"></div>'}
-          <div class="search-item-info">
-            <div class="search-item-title">${escapeHtml(r.title)}</div>
-            <div class="search-item-meta">${escapeHtml(r.appId)} · ${escapeHtml(r.developer || '')}</div>
-          </div>
-          <div class="search-item-price">${priceInfo.text}</div>
-        </div>
-      `;
+      const pi = getPriceDisplay(r);
+      return '<div class="search-item" onclick="showDetail(\'' + escapeHtml(r.appId) + '\',\'' + escapeHtml(r.title) + '\',\'' + escapeHtml(r.icon || '') + '\',\'' + pi.text + '\')">' +
+        (r.icon ? '<img src="' + escapeHtml(r.icon) + '" class="search-item-icon" onerror="this.style.display=\'none\'">' : '<div class="search-item-icon"></div>') +
+        '<div class="search-item-info">' +
+          '<div class="search-item-title">' + escapeHtml(r.title) + '</div>' +
+          '<div class="search-item-meta">' + escapeHtml(r.appId) + ' · ' + escapeHtml(r.developer || '') + '</div>' +
+        '</div>' +
+        '<div class="search-item-price">' + pi.text + '</div>' +
+      '</div>';
     }).join('');
   } catch (e) {
-    resultsEl.innerHTML = '<div class="empty-state">搜索失败: ' + escapeHtml(e.message) + '</div>';
+    resultsEl.innerHTML = '<div class="empty-state">搜索失败</div>';
   }
 }
 
 // ==================== Detail Modal ====================
-function showDetail(id, title, icon, priceText, isFree, price) {
-  detailData = { id, title, isFree, price };
-  
-  const content = document.getElementById('detailContent');
-  content.innerHTML = `
-    ${icon ? `<img src="${escapeHtml(icon)}" onerror="this.style.display='none'">` : ''}
-    <div class="detail-preview-info">
-      <div class="detail-preview-title">${escapeHtml(title)}</div>
-      <div class="detail-preview-id">${escapeHtml(id)}</div>
-    </div>
-  `;
-  
+function showDetail(id, title, icon, priceText) {
+  detailData = { id, title };
+  document.getElementById('detailContent').innerHTML =
+    (icon ? '<img src="' + escapeHtml(icon) + '" onerror="this.style.display=\'none\'">' : '') +
+    '<div style="flex:1;min-width:0;">' +
+      '<div class="detail-preview-title">' + escapeHtml(title) + '</div>' +
+      '<div class="detail-preview-id">' + escapeHtml(id) + '</div>' +
+    '</div>';
   document.getElementById('detailOverlay').classList.add('visible');
 }
 
@@ -252,7 +224,6 @@ async function addFromDetail() {
 async function handleAddApp(e) {
   e.preventDefault();
   const form = new FormData(e.target);
-  
   try {
     await api('/api/apps', {
       method: 'POST',
@@ -288,8 +259,7 @@ function closeEditModal() {
   editingAppId = null;
 }
 
-async function handleEditApp(e) {
-  e.preventDefault();
+async function handleEditApp() {
   if (!editingAppId) return;
 
   const name = document.getElementById('editName').value.trim();
@@ -326,7 +296,6 @@ async function handleEditApp(e) {
 // ==================== Delete App ====================
 async function deleteApp(id) {
   if (!confirm('确认删除此应用？')) return;
-  
   try {
     await api('/api/apps', {
       method: 'DELETE',

@@ -3,7 +3,7 @@
  */
 
 import { getApps, addApp, editApp, deleteApp, checkAll, search } from './api.js';
-// 移除render.js的导入，因为我们已经将其函数导出到window对象了
+import { renderAppCards, renderHistory, closeDetail, closeEdit, showEdit } from './render.js';
 
 // Global variables
 let edId = null; // For tracking which app is being edited

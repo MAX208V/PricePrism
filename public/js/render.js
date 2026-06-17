@@ -239,10 +239,5 @@ function escapeJs(str) {
             .replace(/"/g, '\\"');
 }
 
-// Make functions available globally for onclick handlers
-window.showDetail = showDetail;
-window.closeDetail = closeDetail;
-window.showEdit = showEdit;
-window.closeEdit = closeEdit;
-window.renderAppCards = renderAppCards;
-window.renderHistory = renderHistory;
+// No longer need to add functions to window object since we're using proper exports
+// The export statements at the end of the file are sufficient

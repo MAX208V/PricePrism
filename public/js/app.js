@@ -2,7 +2,7 @@
  * Main application entry point
  */
 
-import { getApps, addApp, editApp, deleteApp, checkAll, search, getHistory } from './api.js';
+import { getApps, addApp, editApp, deleteApp, checkAll, search } from './api.js';
 import { renderAppCards, renderHistory, closeDetail, closeEdit, showEdit } from './render.js';
 
 // Global variables

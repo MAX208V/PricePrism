@@ -4,6 +4,7 @@
 
 import { getApps, saveApps, getStatus, saveStatus, getHistory } from '../repositories/kvRepository.js';
 import { fetchAppInfo } from '../services/scraperService.js';
+import { fixMissingStatusData, clearErrorHistory, reinitializeAppStatuses } from '../utils/fixKvData.js';
 
 /**
  * Handle GET /api/apps - Get all apps
@@ -171,6 +172,32 @@ export async function handleRemoveApp(request, env) {
     return new Response(JSON.stringify({ message: 'App removed successfully' }));
   } catch (error) {
     console.error('Error removing app:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
+  }
+}
+
+/**
+ * Handle POST /api/apps/fix - Fix KV data inconsistencies
+ * @param {object} env - Cloudflare environment
+ * @returns {Response} JSON response indicating success or failure
+ */
+export async function handleFixKvData(env) {
+  try {
+    // Fix missing status data
+    await fixMissingStatusData(env);
+    
+    // Clear error history
+    await clearErrorHistory(env);
+    
+    // Reinitialize app statuses if SCRAPER_API is configured
+    await reinitializeAppStatuses(env);
+    
+    return new Response(JSON.stringify({ 
+      message: 'KV data fixed successfully',
+      timestamp: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error('Error fixing KV data:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 }

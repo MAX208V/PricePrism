@@ -2,7 +2,7 @@
  * Router for handling API requests
  */
 
-import { handleGetApps, handleAddApp, handleEditApp, handleRemoveApp } from './controllers/appController.js';
+import { handleGetApps, handleAddApp, handleEditApp, handleRemoveApp, handleFixKvData } from './controllers/appController.js';
 import { handleGetStatus, handleCheckAll, handleGetHistory, runScheduledCheck } from './controllers/monitorController.js';
 import { handleSearch } from './controllers/searchController.js';
 
@@ -46,6 +46,13 @@ export async function routeRequest(request, env, ctx) {
           default:
             return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
         }
+
+      // App fix endpoint
+      case '/api/apps/fix':
+        if (request.method === 'POST') {
+          return await handleFixKvData(env);
+        }
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
 
       // Monitoring endpoints
       case '/api/status':

@@ -26,9 +26,9 @@ export async function handleGetApps(env) {
   history.sort((a, b) => new Date(b.time) - new Date(a.time));
   history = history.slice(0, 30);
   
-  // Check configuration status (simplified for now)
+  // Check configuration status
   const hasSc3 = !!(await env.KV.get('config'));
-  const hasProxy = !!(await env.KV.get('proxyUrl'));
+  const hasProxy = !!env.SCRAPER_API;  // 检查SCRAPER_API环境变量而不是KV中的proxyUrl
   
   return new Response(JSON.stringify({ 
     apps: appsWithStatus,

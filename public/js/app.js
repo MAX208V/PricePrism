@@ -23,11 +23,22 @@ window.closeDetail = closeDetail;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  // Load apps and history
-  await loadData();
-  
-  // Set up form submission handler
-  document.getElementById('af').addEventListener('submit', addAppWrapper);
+  console.log('DOM loaded, starting app initialization...');
+  try {
+    // Load apps and history
+    await loadData();
+    
+    // Set up form submission handler
+    const form = document.getElementById('af');
+    if (form) {
+      form.addEventListener('submit', addAppWrapper);
+      console.log('Form submission handler attached');
+    } else {
+      console.error('Form element not found');
+    }
+  } catch (error) {
+    console.error('Error during initialization:', error);
+  }
 });
 
 /**
@@ -300,6 +311,10 @@ async function addFromDetail() {
  */
 function showToast(message) {
   const toast = document.getElementById('tt');
+  if (!toast) {
+    console.error('Toast element not found');
+    return;
+  }
   toast.textContent = message;
   toast.classList.add('s');
   

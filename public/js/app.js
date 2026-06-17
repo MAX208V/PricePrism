@@ -50,17 +50,42 @@ async function loadData() {
     const hasProxy = data.hasProxy || false;
     
     // Render data
-    renderAppCards(apps);
-    renderHistory(history);
+    if (typeof window.renderAppCards === 'function') {
+      window.renderAppCards(apps);
+    } else {
+      console.error('renderAppCards function not available');
+      document.getElementById('appList').innerHTML = '<div class="cd" style="text-align:center;padding:32px;color:var(--r);font-weight:500;font-size:14px">渲染错误: 函数未定义</div>';
+    }
+    
+    if (typeof window.renderHistory === 'function') {
+      window.renderHistory(history);
+    } else {
+      console.error('renderHistory function not available');
+      document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--r);font-weight:500;font-size:14px">渲染错误: 函数未定义</div>';
+    }
     
     // Show/hide warning section based on SC3 configuration
-    document.getElementById('warning-section').style.display = hasSc3 ? 'none' : 'block';
+    const warningSection = document.getElementById('warning-section');
+    if (warningSection) {
+      warningSection.style.display = hasSc3 ? 'none' : 'block';
+    }
     
     // Show/hide search section based on proxy configuration
-    document.getElementById('searchSection').style.display = hasProxy ? 'block' : 'none';
+    const searchSection = document.getElementById('searchSection');
+    if (searchSection) {
+      searchSection.style.display = hasProxy ? 'block' : 'none';
+    }
   } catch (error) {
-    showToast('加载数据失败: ' + error.message);
     console.error('Failed to load data:', error);
+    showToast('加载数据失败: ' + error.message);
+    
+    // Show error messages in place of loading indicators
+    try {
+      document.getElementById('appList').innerHTML = '<div class="cd" style="text-align:center;padding:32px;color:var(--r);font-weight:500;font-size:14px">加载失败: ' + error.message + '</div>';
+      document.getElementById('historyList').innerHTML = '<div style="text-align:center;padding:20px;color:var(--r);font-weight:500;font-size:14px">加载失败: ' + error.message + '</div>';
+    } catch (domError) {
+      console.error('Failed to update DOM with error messages:', domError);
+    }
   }
 }
 

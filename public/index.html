@@ -6,10 +6,202 @@
   <title>Price Monitor</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
-  <link href="/css/style.css" rel="stylesheet">
+  <style>
+    :root {
+      --p: #9fe870; --op: #0e0f0c; --pa: #cdffad; --pp: #e2f6d5;
+      --k: #0e0f0c; --b: #454745; --m: #868685; --c: #fff; --s: #e8ebe6;
+      --pos: #2ead4b; --neg: #d03238;
+      --rx: 24px; --rm: 12px; --rp: 9999px;
+      --ss: 8px; --sm: 12px; --sl: 16px;
+      --f: Inter, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--f); font-size: 16px; color: var(--k); background: var(--s);
+      display: flex; justify-content: center; padding: var(--sl); min-height: 100dvh;
+    }
+    .wr {
+      width: 100%; max-width: 480px; display: flex; flex-direction: column;
+      gap: var(--sm); margin-top: var(--ss); padding-bottom: 40px;
+    }
+    .brd { display: flex; align-items: center; gap: var(--sm); margin-bottom: 4px; }
+    .brd-i {
+      width: 36px; height: 36px; background: var(--p); border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; color: var(--op); flex-shrink: 0;
+    }
+    .brd-i .mat { font-size: 20px; }
+    h1 { font-size: 28px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.1; }
+    .sb { font-size: 13px; color: var(--m); margin-top: 2px; font-weight: 500; }
+    .sc-h {
+      display: flex; align-items: center; gap: var(--ss); margin-bottom: var(--ss);
+    }
+    .sc-h .mat { font-size: 22px; color: var(--p); }
+    .sc-h h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .ac {
+      background: var(--c); border-radius: var(--rx);
+      box-shadow: 0 4px 24px rgba(14,15,12,0.06); overflow: hidden;
+    }
+    .ach {
+      display: flex; align-items: center; gap: var(--sm);
+      padding: var(--sl) var(--sl) var(--ss);
+    }
+    .aci-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+    .acn {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1;
+    }
+    .act {
+      font-size: 17px; font-weight: 700;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .acnote {
+      font-size: 11px; color: #856404; font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .aci { font-size: 11px; color: var(--m); font-weight: 500; word-break: break-all; }
+    .acb { padding: 0 var(--sl) var(--sl); }
+    .bg {
+      display: inline-flex; align-items: center; padding: 4px 12px; border-radius: var(--rp);
+      font-size: 11px; font-weight: 700; white-space: nowrap;
+      background: var(--pp); color: #163300;
+    }
+    .bg.gy { background: var(--s); color: var(--b); }
+    .g {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--ss); margin-bottom: var(--sm);
+    }
+    .gi { background: var(--s); border-radius: var(--rm); padding: 14px; }
+    .gl {
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      color: var(--m); margin-bottom: 2px; letter-spacing: 0.03em;
+    }
+    .v {
+      font-size: 14px; font-weight: 600; word-break: break-all;
+      font-variant-numeric: tabular-nums; color: var(--k);
+    }
+    .v.gr { color: var(--pos); }
+    .star { color: #fbbc04; }
+    .ar { display: flex; gap: var(--ss); }
+    .bs {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 38px; width: 38px; border-radius: var(--rp); font-family: var(--f);
+      cursor: pointer; border: none; background: var(--s); color: var(--k);
+    }
+    .bs:hover { background: var(--pp); color: #163300; }
+    .bs .mat { font-size: 18px; }
+    .bs.br .mat { color: var(--neg); }
+    .bp {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 46px; border-radius: var(--rp); font-family: var(--f);
+      font-size: 16px; font-weight: 600; cursor: pointer; border: none; gap: 6px;
+      background: var(--p); color: var(--op); width: 100%;
+    }
+    .bp:hover { background: var(--pa); }
+    .bp:disabled { opacity: 0.5; cursor: default; }
+    .in {
+      width: 100%; height: 50px; background: var(--c); border: 2px solid var(--k);
+      border-radius: var(--rm); padding: 0 var(--sl); font-family: var(--f);
+      font-size: 16px; color: var(--k); outline: none;
+    }
+    .in:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(159,232,112,0.2); }
+    .lb {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      color: var(--b); margin-bottom: 6px; letter-spacing: 0.03em;
+    }
+    .cd {
+      background: var(--c); border-radius: var(--rx);
+      box-shadow: 0 4px 24px rgba(14,15,12,0.06); padding: var(--sl);
+    }
+    .sh {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--ss);
+    }
+    .sh h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .hr {
+      display: flex; align-items: center; gap: var(--ss);
+      padding: 10px 0; border-bottom: 1px solid var(--s);
+      font-size: 13px;
+    }
+    .hr:last-child { border-bottom: none; }
+    .ht {
+      color: var(--m); font-weight: 500; white-space: nowrap;
+      min-width: 52px; font-variant-numeric: tabular-nums;
+    }
+    .hn {
+      flex: 1; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .hp { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .hb { padding: 2px 10px; font-size: 10px; }
+    .w {
+      background: #fff3cd; color: #856404; border-radius: var(--rm);
+      padding: var(--sm) var(--sl); font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tt {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: var(--k); color: var(--p); padding: 8px 18px;
+      border-radius: var(--rp); font-size: 13px; z-index: 10000;
+      opacity: 0; transition: opacity 0.2s; pointer-events: none; font-weight: 500;
+    }
+    .tt.s { opacity: 1; }
+    .ft {
+      text-align: center; padding: 20px 0; font-size: 12px; color: var(--m); font-weight: 500;
+    }
+    .sh .bs {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 34px; padding: 6px var(--sl); border-radius: var(--rp);
+      font-family: var(--f); font-size: 12px; font-weight: 600;
+      cursor: pointer; border: none; gap: 4px;
+      background: var(--s); color: var(--k);
+    }
+    .sh .bs:hover { background: var(--pp); color: #163300; }
+    .sh .bs .mat { font-size: 14px; }
+    .mat {
+      font-family: Material Symbols Rounded; font-weight: 400; font-style: normal;
+      font-size: 18px; display: inline-block; line-height: 1;
+      letter-spacing: normal; text-transform: none; white-space: nowrap; word-wrap: normal;
+    }
+    .ov {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.35); z-index: 9999;
+      display: none; align-items: center; justify-content: center; padding: var(--sl);
+    }
+    .ov.s { display: flex; }
+    .md {
+      background: var(--c); border-radius: var(--rx); width: 100%;
+      max-width: 400px; padding: var(--sl); box-shadow: 0 8px 40px rgba(14,15,12,0.12);
+    }
+    .md h2 {
+      font-size: 20px; font-weight: 900; letter-spacing: -0.03em; margin-bottom: var(--sm);
+    }
+    .sr {
+      margin-top: var(--sm); display: flex; flex-direction: column; gap: var(--ss);
+    }
+    .sri {
+      display: flex; align-items: center; gap: var(--sm); background: var(--s);
+      border-radius: var(--rm); padding: var(--sm); cursor: pointer; transition: background 0.15s;
+    }
+    .sri:hover { background: var(--pp); }
+    .sri img { width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0; }
+    .sri .srd { flex: 1; min-width: 0; }
+    .sri .srd .srn {
+      font-size: 14px; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sri .srd .sra {
+      font-size: 11px; color: var(--m);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sri .srp { font-size: 13px; font-weight: 600; color: var(--pos); white-space: nowrap; }
+    .rw { display: flex; gap: var(--ss); }
+    .empty {
+      text-align: center; padding: 32px; color: var(--m);
+      font-weight: 500; font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <div class="wr">
+    <!-- Header -->
     <div class="brd">
       <div class="brd-i"><span class="mat">monitoring</span></div>
       <div>
@@ -17,13 +209,15 @@
         <div class="sb">极简 · 智能 · 省心</div>
       </div>
     </div>
-    
-    <div class="w" id="warning-section" style="display: none;">
+
+    <!-- Warning -->
+    <div id="warnBox" class="w" style="display:none">
       <span class="mat" style="font-size:16px">warning</span> 未配置通知
     </div>
-    
-    <div class="cd" id="searchSection" style="display: none;">
-      <h2 style="font-size:18px;font-weight:700;letter-spacing:-.02em;margin-bottom:var(--ss)">搜索应用</h2>
+
+    <!-- Search Section -->
+    <div id="searchSection" class="cd" style="display:none">
+      <h2 style="font-size:18px;font-weight:700;letter-spacing:-0.02em;margin-bottom:var(--ss)">搜索应用</h2>
       <div style="display:flex;gap:var(--ss)">
         <input class="in" id="searchTerm" placeholder="输入关键词搜索 Google Play..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch()}">
         <button class="bp" onclick="doSearch()" style="width:56px;flex-shrink:0;padding:0;border-radius:14px">
@@ -32,19 +226,17 @@
       </div>
       <div id="searchResults"></div>
     </div>
-    
+
+    <!-- Monitored Apps -->
     <div class="sh">
       <h2>监控应用</h2>
       <button class="bs" onclick="checkAll()">
         <span class="mat">refresh</span>
       </button>
     </div>
-    
-    <div id="appList">
-      <!-- App cards will be rendered here -->
-      <div class="cd" style="text-align:center;padding:32px;color:var(--m);font-weight:500;font-size:14px">加载中...</div>
-    </div>
-    
+    <div id="appsContainer"></div>
+
+    <!-- Add App Form -->
     <div class="cd">
       <div class="sc-h">
         <span class="mat">add_box</span>
@@ -76,23 +268,19 @@
         </button>
       </form>
     </div>
-    
+
+    <!-- History -->
     <div class="cd">
-      <div class="sh">
-        <h2>通知记录</h2>
-      </div>
-      <div id="historyList">
-        <!-- History will be rendered here -->
-        <div style="text-align:center;padding:20px;color:var(--m);font-weight:500;font-size:14px">加载中...</div>
-      </div>
+      <div class="sh"><h2>通知记录</h2></div>
+      <div id="historyContainer"></div>
     </div>
-    
+
     <div class="ft">Cloudflare Workers · Wise Design</div>
   </div>
-  
+
   <!-- Detail Modal -->
   <div id="dv" class="ov" onclick="if(event.target===this)closeDetail()">
-    <div class="md" id="detailMd" onclick="event.stopPropagation()">
+    <div class="md" onclick="event.stopPropagation()">
       <div id="detailContent"></div>
       <div style="margin-top:var(--ss)">
         <div class="lb">降价阈值 (USD)</div>
@@ -102,23 +290,13 @@
         <div class="lb">地区</div>
         <input class="in" id="dtCountry" value="us" style="height:40px;font-size:14px">
       </div>
-      <div style="margin-top:var(--ss)">
-        <div class="lb">备注</div>
-        <input class="in" id="dtNote" placeholder="可写备注信息" style="height:40px;font-size:14px">
-      </div>
-      <div style="margin-top:var(--ss)">
-        <label class="tg">
-          <input type="checkbox" class="tgi" id="dtMonitorMode">
-          <span class="tk"></span> 价格变动时通知
-        </label>
-      </div>
       <button class="bp" onclick="addFromDetail()" id="detailAddBtn" style="margin-top:var(--sm);height:40px;font-size:14px">添加监控</button>
     </div>
   </div>
-  
+
   <!-- Edit Modal -->
-  <div id="ov" class="ov" onclick="if(event.target===this)closeEdit()">
-    <div class="md" onclick="event.stopPropagation()">
+  <div id="ov" class="ov">
+    <div class="md">
       <h2>编辑应用</h2>
       <div style="display:grid;gap:var(--ss)">
         <div>
@@ -137,23 +315,263 @@
           <div class="lb">地区</div>
           <input class="in" id="eCountry">
         </div>
-        <div>
-          <label class="tg">
-            <input type="checkbox" class="tgi" id="eMonitorMode">
-            <span class="tk"></span> 价格变动时通知
-          </label>
-        </div>
       </div>
-      <button class="bp" onclick="saveEdit()" style="margin-top:var(--sm)">保存</button>
+      <div class="rw" style="margin-top:var(--sm)">
+        <button class="bs" onclick="closeEdit()" style="flex:1;width:auto;padding:0 var(--sxl)">取消</button>
+        <button class="bp" onclick="saveEdit()" style="flex:1">保存</button>
+      </div>
     </div>
   </div>
-  
-  <!-- Toast Message -->
+
+  <!-- Toast -->
   <div id="tt" class="tt"></div>
-  
-  <!-- JavaScript Files -->
-  <script src="/js/simple-api.js"></script>
-  <script src="/js/simple-render.js"></script>
-  <script src="/js/simple-app-main.js"></script>
+
+  <script>
+    // ===== State =====
+    const tt = document.getElementById('tt');
+    let ttm, edId = null, detailData = null;
+
+    // ===== Utils =====
+    function fmtUTC(iso) {
+      if (!iso) return '-';
+      const d = new Date(iso);
+      const pad = n => n < 10 ? '0' + n : '' + n;
+      return pad(d.getUTCMonth() + 1) + '/' + pad(d.getUTCDate()) + ' ' + pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ' UTC';
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function escJs(s) {
+      if (!s) return '';
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '\\\'').replace(/"/g, '&quot;');
+    }
+
+    function show(msg) {
+      tt.textContent = msg;
+      tt.classList.add('s');
+      clearTimeout(ttm);
+      ttm = setTimeout(() => tt.classList.remove('s'), 2500);
+    }
+
+    async function api(path, opts = {}) {
+      const r = await fetch(path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        show(d.error || '请求失败');
+        throw new Error(d.error);
+      }
+      return d;
+    }
+
+    // ===== CRUD Operations =====
+    function addApp(e) {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      api('/api/apps', {
+        method: 'POST',
+        body: JSON.stringify({
+          app_id: f.get('app_id'),
+          name: f.get('name') || '',
+          threshold: parseFloat(f.get('threshold')),
+          country: f.get('country')
+        })
+      }).then(() => {
+        show('已添加');
+        setTimeout(() => location.reload(), 800);
+      });
+    }
+
+    function removeApp(id) {
+      if (!confirm('确认删除？')) return;
+      api('/api/apps', {
+        method: 'DELETE',
+        body: JSON.stringify({ app_id: id })
+      }).then(() => {
+        show('已删除');
+        setTimeout(() => location.reload(), 800);
+      });
+    }
+
+    function editApp(id, name, country, threshold, note) {
+      edId = id;
+      document.getElementById('eName').value = name;
+      document.getElementById('eThreshold').value = threshold;
+      document.getElementById('eCountry').value = country;
+      document.getElementById('eNote').value = note || '';
+      document.getElementById('ov').classList.add('s');
+    }
+
+    function closeEdit() {
+      edId = null;
+      document.getElementById('ov').classList.remove('s');
+    }
+
+    function saveEdit() {
+      if (!edId) return;
+      const n = document.getElementById('eName').value.trim();
+      const t = parseFloat(document.getElementById('eThreshold').value);
+      const c = document.getElementById('eCountry').value.trim();
+      const nt = document.getElementById('eNote').value.trim();
+      if (!n) { show('名称不能为空'); return; }
+      if (isNaN(t) || t <= 0) { show('无效阈值'); return; }
+      const b = { app_id: edId, name: n, threshold: t, country: c };
+      if (nt) b.note = nt;
+      api('/api/apps', { method: 'PATCH', body: JSON.stringify(b) }).then(() => {
+        show('已更新');
+        closeEdit();
+        setTimeout(() => location.reload(), 800);
+      });
+    }
+
+    function checkAll() {
+      show('正在检查...');
+      api('/api/check').then(() => {
+        show('检查完成');
+        setTimeout(() => location.reload(), 1500);
+      });
+    }
+
+    // ===== Search =====
+    async function doSearch() {
+      const q = document.getElementById('searchTerm').value.trim();
+      if (!q) { show('请输入关键词'); return; }
+      const el = document.getElementById('searchResults');
+      el.textContent = '搜索中...';
+      try {
+        const d = await api('/api/search?term=' + encodeURIComponent(q));
+        if (!d.results || d.results.length === 0) {
+          el.innerHTML = '<div class="empty">未找到结果</div>';
+          return;
+        }
+        let h = '';
+        for (const r of d.results) {
+          h += `<div class="sri" onclick='showDetail("${escJs(r.appId)}","${escJs(r.title)}","${escJs(r.icon || '')}","${escJs(r.priceText || (r.free ? "免费" : ""))}","${escJs(r.developer || '')}","${escJs(r.scoreText || '')}")'>`;
+          if (r.icon) h += `<img src="${esc(r.icon)}" alt="" onerror="this.style.display='none'">`;
+          h += `<div class="srd"><div class="srn">${esc(r.title)}</div><div class="sra">${esc(r.appId)} - ${esc(r.developer)}</div></div>`;
+          h += `<div class="srp">${esc(r.priceText || (r.free ? "免费" : ""))}</div></div>`;
+        }
+        el.innerHTML = `<div class="sr">${h}</div>`;
+      } catch (e) {
+        el.innerHTML = '<div class="empty">搜索失败</div>';
+      }
+    }
+
+    // ===== Detail Modal =====
+    function showDetail(id, title, icon, price, dev, score) {
+      detailData = { id, title };
+      let h = '<div style="display:flex;align-items:center;gap:var(--sm);margin-bottom:var(--ss)">';
+      if (icon) h += `<img src="${esc(icon)}" alt="" style="width:44px;height:44px;border-radius:10px;flex-shrink:0" onerror="this.style.display='none'">`;
+      h += `<div><div style="font-size:17px;font-weight:700">${esc(title)}</div><div style="font-size:11px;color:var(--m);margin-top:1px">${esc(id)}</div></div></div>`;
+      h += '<div class="g" style="margin-bottom:0">';
+      h += `<div class="gi" style="padding:10px"><div class="gl">评分</div><div class="v"><span class="star">★</span> ${esc(score || '-')}</div></div>`;
+      h += `<div class="gi" style="padding:10px"><div class="gl">价格</div><div class="v">${esc(price || '-')}</div></div></div>`;
+      if (dev) h += `<div class="gi" style="padding:10px;margin-top:var(--ss)"><div class="gl">开发者</div><div class="v">${esc(dev)}</div></div>`;
+      document.getElementById('detailContent').innerHTML = h;
+      document.getElementById('dv').classList.add('s');
+    }
+
+    function closeDetail() {
+      detailData = null;
+      document.getElementById('dv').classList.remove('s');
+    }
+
+    function addFromDetail() {
+      if (!detailData) return;
+      const btn = document.getElementById('detailAddBtn');
+      const t = parseFloat(document.getElementById('dtThreshold').value);
+      const c = document.getElementById('dtCountry').value.trim();
+      if (isNaN(t) || t <= 0) { show('无效阈值'); return; }
+      btn.disabled = true;
+      btn.textContent = '添加中...';
+      api('/api/apps', {
+        method: 'POST',
+        body: JSON.stringify({
+          app_id: detailData.id,
+          name: detailData.title,
+          threshold: t,
+          country: c || 'us'
+        })
+      }).then(() => {
+        show('已添加');
+        closeDetail();
+        setTimeout(() => location.reload(), 800);
+      }).catch(() => {
+        btn.disabled = false;
+        btn.textContent = '添加监控';
+      });
+    }
+
+    // ===== Rendering =====
+    function renderAppCard(a) {
+      const st = a.status || {};
+      const p = st.last_checked_price;
+      const ps = p !== undefined ? `$${p}` : '-';
+      const ts = fmtUTC(st.last_checked_at);
+      const ns = fmtUTC(st.last_notified_at);
+      const lo = p !== undefined && p > 0 && p < a.threshold;
+      const icon = st.icon || '', score = st.scoreText || '', ratings = st.ratings || '';
+      const note = a.note || '', dev = st.developer || '';
+
+      let head = '<div class="ach">';
+      if (icon) head += `<img src="${esc(icon)}" alt="" class="aci-icon" onerror="this.style.display='none'">`;
+      head += `<div class="acn"><div class="act">${esc(a.name)}</div>`;
+      if (note) head += `<div class="acnote">${esc(note)}</div>`;
+      head += `<div class="aci">${dev ? esc(dev) + ' · ' : ''}${esc(a.id)}</div></div>`;
+      head += `<span class="${lo ? 'bg' : 'bg gy'}">${lo ? '低于阈值' : '正常'}</span></div>`;
+
+      const extra = `<div class="gi" style="grid-column:1/3"><div class="gl">评分 / 心愿单</div><div class="v">${score ? '<span class="star">★</span> ' + esc(score) + ' ' : ''}${ratings ? '<span style="color:var(--m)">|</span> ' + esc(ratings) : ''}</div></div>`;
+
+      return `<div class="ac">${head}<div class="acb"><div class="g"><div class="gi"><div class="gl">当前价格</div><div class="v${lo ? ' gr' : ''}">${ps}</div></div><div class="gi"><div class="gl">阈值</div><div class="v">$${a.threshold}</div></div>${extra}<div class="gi"><div class="gl">检查</div><div class="v">${ts}</div></div><div class="gi"><div class="gl">通知</div><div class="v">${ns}</div></div></div><div class="ar"><button class="bs" onclick="editApp('${esc(a.id)}','${esc(a.name)}','${esc(a.country || 'us')}',${a.threshold},'${esc(note)}')"><span class="mat">edit</span></button><button class="bs br" onclick="removeApp('${esc(a.id)}')"><span class="mat">delete</span></button></div></div></div>`;
+    }
+
+    function renderHistoryRow(hh) {
+      return `<div class="hr"><span class="ht">${fmtUTC(hh.time)}</span><span class="hn">${esc(hh.name)}</span><span class="hp">$${hh.price}</span><span class="bg hb${hh.notified ? '' : ' gy'}">${hh.notified ? '已通知' : '跳过'}</span></div>`;
+    }
+
+    // ===== Initialization =====
+    async function init() {
+      try {
+        // Load dashboard data
+        const data = await api('/api/dashboard');
+
+        // Show warning if no notifier
+        if (!data.hasSc3) {
+          document.getElementById('warnBox').style.display = 'flex';
+        }
+
+        // Show search if proxy available
+        if (data.hasProxy) {
+          document.getElementById('searchSection').style.display = 'block';
+        }
+
+        // Render apps
+        const appsContainer = document.getElementById('appsContainer');
+        if (data.apps && data.apps.length > 0) {
+          appsContainer.innerHTML = data.apps.map(renderAppCard).join('');
+        } else {
+          appsContainer.innerHTML = '<div class="empty">暂无监控应用</div>';
+        }
+
+        // Render history
+        const historyContainer = document.getElementById('historyContainer');
+        if (data.history && data.history.length > 0) {
+          historyContainer.innerHTML = data.history.map(renderHistoryRow).join('');
+        } else {
+          historyContainer.innerHTML = '<div class="empty">暂无记录</div>';
+        }
+      } catch (e) {
+        show('加载失败');
+      }
+    }
+
+    // Start
+    init();
+  </script>
 </body>
 </html>

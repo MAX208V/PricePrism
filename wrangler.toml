@@ -1,25 +1,28 @@
-# wrangler.toml
-name = "play-scraper-api"
-main = "src/index.js"
-compatibility_date = "2023-10-30"
+# Play Scraper API - Cloudflare Workers Configuration
+# Architecture: Workers + KV + Cron + Assets
+
+name = 'play-scraper-api'
+main = "_worker.js"
+compatibility_date = "2024-02-20"
+compatibility_flags = ["nodejs_compat"]
 keep_vars = true
 
-# 静态资源配置 (前端分离)
-[assets]
-directory = "./public"
-binding = "ASSETS"
-keep_vars = true
+# ================== Assets (Static Files) ==================
+# Serve frontend static files
+[site]
+bucket = "./public"
 
-# KV 存储（保存应用配置和通知状态）
+# ================== KV Namespaces ==================
 [[kv_namespaces]]
 binding = "KV"
 id = "8b89d8b5c511457390f5aee4cce00570"
 
+# ================== Cron Triggers ==================
+# Run price check every hour
 [triggers]
-crons = ["0 * * * *"] # 每小时执行一次
+crons = ["0 * * * *"]
 
-# 环境变量（这些是示例值，实际部署时应在 Cloudflare Dashboard 中设置为加密变量）
-[vars]
-# SCRAPER_API = "https://scraper.example.com"  # 替换为实际的 Scraper API 地址
-# SC3_UID = "your-sc3-uid"                     # 建议在 Cloudflare Dashboard 中设置为加密变量
-# SC3_SENDKEY = "your-sc3-sendkey"             # 建议在 Cloudflare Dashboard 中设置为加密变量
+# ================== Environment Variables ==================
+# Set these via wrangler secret put:
+# - SC3_KEY: ServerChan3 notification key
+# - PROXY_URL: CORS proxy URL for search functionality

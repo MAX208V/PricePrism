@@ -1,87 +1,80 @@
-# Play Scraper API - Price Monitor
+# Play Scraper API
 
-基于 Cloudflare Workers 的 Google Play 应用价格监控系统，采用前后端分离架构。
+监控 Google Play 商店特定应用价格并提醒。
 
-## 架构概览
+## 架构
 
-- 前端：纯 HTML/CSS/JS，作为静态资源托管 (`public/`)
-- 后端：ES Modules 模块化拆分 (`src/`)
-- 数据存储：Cloudflare KV
-- 定时任务：Cron Triggers 自动监控价格变化
-- 通知推送：Server酱 (SC3)
-
-## 目录结构
+**Cloudflare Workers + KV + Cron + Assets**
 
 ```
-.
-├── public/                 # 前端静态资源目录
-│   ├── index.html          # 主页面
-│   ├── css/
-│   │   └── style.css       # 样式文件
-│   └── js/
-│       ├── api.js          # API 请求封装
-│       ├── render.js       # DOM 渲染逻辑
-│       └── app.js          # 应用主入口
-├── src/                    # 后端 Worker 逻辑目录
-│   ├── index.js            # Worker 入口
-│   ├── router.js           # API 路由分发
-│   ├── controllers/        # 控制器层
-│   ├── services/           # 服务层
-│   ├── repositories/       # 数据访问层
-│   └── utils/              # 工具函数
-├── wrangler.toml           # Cloudflare 配置文件
-└── package.json            # 项目依赖配置
+┌─────────────────────────────────────────────────────────────┐
+│                      Cloudflare Workers                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │  _worker.js │  │  KV Store   │  │  Cron Trigger       │  │
+│  │  API Routes │  │  App Data   │  │  Hourly Price Check │  │
+│  └─────────────┘  │  History    │  └─────────────────────┘  │
+│                   │  Config     │                           │
+│                   └─────────────┘                           │
+│                          │                                  │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Assets (Static Files)                  │    │
+│  │         public/index.html  (Dashboard UI)           │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 开发指南
+## 项目结构
 
-### 本地开发
+```
+play-scraper-api/
+├── _worker.js           # Worker 入口 (API 路由 & Cron)
+├── wrangler.toml        # Cloudflare 配置
+├── public/
+│   └── index.html       # Dashboard 前端UI (静态页面)
+└── README.md            # 本文件
+```
 
-1. 安装依赖：
-   ```bash
-   npm install
-   ```
+## 部署
 
-2. 启动本地开发服务器：
-   ```bash
-   npm run dev
-   ```
-
-### 部署
-
-部署到 Cloudflare Workers：
 ```bash
-npm run deploy
+# 1. 安装 Wrangler
+echo "你的Cloudflare API Token" | wrangler login
+
+# 2. 设置 Secrets
+wrangler secret put SC3_KEY
+wrangler secret put PROXY_URL
+
+# 3. 部署
+wrangler deploy
 ```
 
-### 环境变量配置
+## 环境变量
 
-在 `wrangler.toml` 中配置必要的环境变量：
+| 变量名 | 说明 |
+|--------|------|
+| `SC3_KEY` | ServerChan3 通知密钥 |
+| `PROXY_URL` | CORS代理地址 (用于搜索功能) |
 
-- `SCRAPER_API`: Scraper API 地址
-- `SC3_UID`: Server酱 UID（建议在 Cloudflare Dashboard 中设置为加密变量）
-- `SC3_SENDKEY`: Server酱 SENDKEY（建议在 Cloudflare Dashboard 中设置为加密变量）
+## API 端点
 
-### KV 存储配置
-
-确保在 Cloudflare Dashboard 中创建了 KV 存储命名空间，并将 ID 配置到 `wrangler.toml` 中的 `kv_namespaces.id`。
-
-## API 接口
-
-### 应用管理
-- `GET /api/apps` - 获取所有应用及其状态
-- `POST /api/apps` - 添加新应用
-- `PATCH /api/apps` - 更新应用配置
-- `DELETE /api/apps` - 删除应用
-
-### 监控管理
-- `GET /api/status` - 获取所有应用状态
-- `POST /api/check` - 手动触发价格检查
-- `GET /api/history` - 获取通知历史
-
-### 搜索功能
-- `GET /api/search?term=<keyword>` - 搜索应用
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/` | Dashboard 页面 |
+| GET | `/api/dashboard` | 获取 Dashboard 数据 |
+| GET | `/api/apps` | 列出所有监控应用 |
+| POST | `/api/apps` | 添加应用 |
+| DELETE | `/api/apps` | 删除应用 |
+| PATCH | `/api/apps` | 更新应用 |
+| POST | `/api/check` | 手动触发价格检查 |
+| GET | `/api/search?term=xxx` | 搜索应用 |
 
 ## 定时任务
 
-默认每小时执行一次价格监控检查，可通过修改 `wrangler.toml` 中的 `triggers.crons` 来调整频率。
+每小时自动检查一次所有应用的价格。
+
+## 技术栈
+
+- **Backend**: Cloudflare Workers + KV
+- **Cron**: 价格检查定时任务
+- **Assets**: 静态 HTML Dashboard (无框架, 原生JS)
+- **通知**: ServerChan3

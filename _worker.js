@@ -99,13 +99,14 @@ async function handleAppsApi(request, env) {
     
     await env.KV.put("config:apps", JSON.stringify(apps));
     
-    // 保存图标到状态
-    if (icon) {
-      const statusKey = "status:" + body.app_id;
-      const status = await env.KV.get(statusKey, "json") || {};
-      status.icon = icon;
-      await env.KV.put(statusKey, JSON.stringify(status));
-    }
+    // 创建或更新状态 KV
+    const statusKey = "status:" + body.app_id;
+    const status = await env.KV.get(statusKey, "json") || {};
+    if (icon) status.icon = icon;
+    if (name) status.title = name;
+    status.last_checked_at = null;
+    status.last_checked_price = null;
+    await env.KV.put(statusKey, JSON.stringify(status));
     
     return jsonResponse({ ok: true });
   }
@@ -193,7 +194,8 @@ async function handleSearch(request, env) {
       appId: app.appId,
       title: app.title,
       icon: app.icon,
-      developer: app.developer,
+      developer: typeof app.developer === 'object' && app.developer !== null ? app.developer.devId || app.developer.name || String(app.developer) : (app.developer || ''),
+      developerUrl: typeof app.developer === 'object' && app.developer !== null ? app.developer.url : '',
       score: app.score,
       scoreText: app.scoreText,
       price: app.price,

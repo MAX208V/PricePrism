@@ -160,7 +160,7 @@ async function doSearch() {
         (r.icon ? '<img src="' + escapeHtml(r.icon) + '" class="search-item-icon" onerror="this.style.display=\'none\'">' : '<div class="search-item-icon"></div>') +
         '<div class="search-item-info">' +
           '<div class="search-item-title">' + escapeHtml(r.title) + '</div>' +
-          '<div class="search-item-meta">' + escapeHtml(r.appId) + ' · ' + escapeHtml(r.developer || '') + '</div>' +
+          '<div class="search-item-meta">' + escapeHtml(r.appId) + ' · ' + escapeHtml(typeof r.developer === 'object' ? (r.developer.devId || r.developer.name || '') : (r.developer || '')) + '</div>' +
         '</div>' +
         '<div class="search-item-price">' + pi.text + '</div>' +
       '</div>';

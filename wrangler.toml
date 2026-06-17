@@ -1,5 +1,6 @@
-name = "play-scraper-api"
-main = "src/index.ts"
+# wrangler.toml
+name = 'play-scraper-api'
+main = "_worker.js"
 compatibility_date = "2024-02-20"
 keep_vars = true
 

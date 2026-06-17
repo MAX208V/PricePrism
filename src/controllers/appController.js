@@ -18,7 +18,24 @@ export async function handleGetApps(env) {
       return { ...app, status };
     })
   );
-  return new Response(JSON.stringify(appsWithStatus), {
+  
+  // Get check history from KV storage (limited to last 30 entries)
+  let history = await getHistory(env);
+  
+  // Sort history by time descending and limit to 30 entries
+  history.sort((a, b) => new Date(b.time) - new Date(a.time));
+  history = history.slice(0, 30);
+  
+  // Check configuration status (simplified for now)
+  const hasSc3 = !!(await env.KV.get('config'));
+  const hasProxy = !!(await env.KV.get('proxyUrl'));
+  
+  return new Response(JSON.stringify({ 
+    apps: appsWithStatus,
+    history: history,
+    hasSc3: hasSc3,
+    hasProxy: hasProxy
+  }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }

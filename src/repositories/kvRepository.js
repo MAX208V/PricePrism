@@ -8,8 +8,15 @@
  * @returns {Promise<Array>} Array of apps
  */
 export async function getApps(env) {
-  const appsStr = await env.KV.get("apps");
-  return appsStr ? JSON.parse(appsStr) : [];
+  const appsData = await env.KV.get("apps", "json");
+  if (!appsData) return [];
+  
+  // Convert object format to array format if needed
+  if (typeof appsData === 'object' && !Array.isArray(appsData)) {
+    return Object.values(appsData);
+  }
+  
+  return Array.isArray(appsData) ? appsData : [];
 }
 
 /**
@@ -19,7 +26,12 @@ export async function getApps(env) {
  * @returns {Promise<void>}
  */
 export async function saveApps(env, apps) {
-  await env.KV.put("apps", JSON.stringify(apps));
+  // Convert array back to object format for backward compatibility
+  const appsObj = {};
+  apps.forEach(app => {
+    appsObj[app.app_id] = app;
+  });
+  await env.KV.put("apps", JSON.stringify(appsObj));
 }
 
 /**

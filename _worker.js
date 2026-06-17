@@ -105,7 +105,7 @@ async function handleDashboardApi(env) {
     apps: list,
     history: history,
     hasSc3: !!(env.SC3_UID && env.SC3_SENDKEY),
-    hasProxy: !!env.SCRAPER_PROXY
+    hasProxy: !!env.SCRAPER_API
   });
 }
 

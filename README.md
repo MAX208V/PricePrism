@@ -56,8 +56,7 @@ play-scraper-api/
 |------|------|
 | `SC3_UID` | Server酱推送 UID |
 | `SC3_SENDKEY` | Server酱推送 SendKey |
-| `SCRAPER_PROXY` | Google Play 代理服务地址 |
-| `SCRAPER_API` | 备用爬虫 API (可选) |
+| `SCRAPER_API` | Google Play 爬虫 API 地址（支持搜索功能） |
 
 ## 部署
 

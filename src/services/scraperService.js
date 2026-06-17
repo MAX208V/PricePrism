@@ -17,8 +17,8 @@ export async function fetchAppInfo(env, appId, country) {
   }
   
   try {
-    // 根据您的真实API格式
-    const response = await fetch(`${scraperApi}/api/price?appId=${encodeURIComponent(appId)}&country=${encodeURIComponent(country)}`);
+    // 根据您真实的GooglePlayScraper_api格式
+    const response = await fetch(`${scraperApi}/api/price?id=${encodeURIComponent(appId)}&country=${encodeURIComponent(country || 'us')}&lang=en`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -46,8 +46,8 @@ export async function fetchPrice(env, appId, country) {
   }
   
   try {
-    // 根据您的真实API格式
-    const response = await fetch(`${scraperApi}/api/price?appId=${encodeURIComponent(appId)}&country=${encodeURIComponent(country)}`);
+    // 根据您真实的GooglePlayScraper_api格式
+    const response = await fetch(`${scraperApi}/api/price?id=${encodeURIComponent(appId)}&country=${encodeURIComponent(country || 'us')}&lang=en`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PricePrism - Play App 价格监控</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Card 1: Search -->
+    <div class="card">
+      <div class="card-header">
+        <span class="logo-badge">
+          <span class="material-symbols-rounded">diamond</span>
+          PricePrism
+        </span>
+      </div>
+      <div class="search-box">
+        <input type="text" class="input" id="searchInput" placeholder="搜索 Google Play 应用...">
+        <button class="btn btn-primary" onclick="doSearch()">
+          <span class="material-symbols-rounded">search</span>
+        </button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+    </div>
+
+    <!-- Card 2: Add App -->
+    <div class="card">
+      <div class="card-header">
+        <span class="material-symbols-rounded">add_circle</span>
+        <h2 class="card-title">添加应用</h2>
+      </div>
+      <form id="addForm" onsubmit="handleAddApp(event)">
+        <div class="form-group">
+          <label class="label">包名</label>
+          <input type="text" class="input" name="app_id" placeholder="com.example.app" required>
+        </div>
+        <div class="form-group">
+          <label class="label">显示名称 <span class="label-optional">(可选)</span></label>
+          <input type="text" class="input" name="name" placeholder="留空自动获取">
+        </div>
+        <div class="form-group">
+          <div class="form-row">
+            <div>
+              <label class="label">降价阈值 (USD)</label>
+              <input type="number" class="input" name="threshold" step="0.01" value="6.00" required>
+            </div>
+            <div>
+              <label class="label">地区</label>
+              <input type="text" class="input" name="country" value="us">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="label">备注</label>
+          <input type="text" class="input" name="note" placeholder="可填写备注信息">
+        </div>
+        <div class="form-group">
+          <label class="toggle-wrapper">
+            <input type="checkbox" class="toggle-input" name="monitor_mode">
+            <span class="toggle"></span>
+            价格变动时通知
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          <span class="material-symbols-rounded">add</span>
+          添加监控
+        </button>
+      </form>
+    </div>
+
+    <!-- Card 3: Notification History -->
+    <div class="card">
+      <div class="card-header">
+        <span class="logo-badge">
+          <span class="material-symbols-rounded">notifications</span>
+          通知记录
+        </span>
+      </div>
+      <div id="historyList">
+        <div class="empty-state">加载中...</div>
+      </div>
+    </div>
+
+    <!-- Monitored Apps -->
+    <div id="appsList"></div>
+
+    <div class="footer">
+      Cloudflare Workers · Wise Design
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editOverlay" class="overlay" onclick="if(event.target===this)closeEditModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <h2 class="modal-title">编辑应用</h2>
+      <form id="editForm" onsubmit="handleEditApp(event)">
+        <div class="form-group">
+          <label class="label">显示名称</label>
+          <input type="text" class="input" id="editName" required>
+        </div>
+        <div class="form-group">
+          <label class="label">降价阈值 (USD)</label>
+          <input type="number" class="input" id="editThreshold" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label class="label">地区</label>
+          <input type="text" class="input" id="editCountry">
+        </div>
+        <div class="form-group">
+          <label class="label">备注</label>
+          <input type="text" class="input" id="editNote" placeholder="可填写备注信息">
+        </div>
+        <div class="form-group">
+          <label class="toggle-wrapper">
+            <input type="checkbox" class="toggle-input" id="editMonitorMode">
+            <span class="toggle"></span>
+            价格变动时通知
+          </label>
+        </div>
+        <div style="display: flex; gap: var(--space-sm);">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeEditModal()">取消</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailOverlay" class="overlay" onclick="if(event.target===this)closeDetailModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div id="detailContent"></div>
+      <div class="form-group" style="margin-top: var(--space-md);">
+        <label class="label">降价阈值 (USD)</label>
+        <input type="number" class="input" id="detailThreshold" step="0.01" value="6.00">
+      </div>
+      <div class="form-group">
+        <label class="label">地区</label>
+        <input type="text" class="input" id="detailCountry" value="us">
+      </div>
+      <div class="form-group">
+        <label class="label">备注</label>
+        <input type="text" class="input" id="detailNote" placeholder="可填写备注信息">
+      </div>
+      <div class="form-group">
+        <label class="toggle-wrapper">
+          <input type="checkbox" class="toggle-input" id="detailMonitorMode">
+          <span class="toggle"></span>
+          价格变动时通知
+        </label>
+      </div>
+      <button class="btn btn-primary" style="width: 100%;" onclick="addFromDetail()">
+        <span class="material-symbols-rounded">add</span>
+        添加监控
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

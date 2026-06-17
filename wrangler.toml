@@ -1,5 +1,5 @@
 # wrangler.toml
-name = "price-monitor"
+name = "play-scraper-api"
 main = "src/index.js"
 compatibility_date = "2023-10-30"
 keep_vars = true

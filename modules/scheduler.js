@@ -22,8 +22,8 @@ export async function handleScheduled(env) {
       config = {};
     }
     
-    // Get proxy URL if configured
-    const proxyUrl = config.proxyUrl;
+    // Get scraper API URL from environment or use default
+    const scraperApiUrl = env.SCRAPER_API || 'https://play-scraper-api.vercel.app/api/price';
     
     // Get existing history
     const historyRaw = await env.KV.get('history') || '[]';
@@ -39,7 +39,7 @@ export async function handleScheduled(env) {
     for (const app of apps) {
       try {
         // Fetch app details
-        const appDetails = await fetchAppDetails(app.id, app.country, proxyUrl);
+        const appDetails = await fetchAppDetails(app.id, app.country, scraperApiUrl);
         
         // Update app status
         app.status = {
@@ -117,47 +117,25 @@ export async function handleScheduled(env) {
   }
 }
 
-async function fetchAppDetails(appId, country, proxyUrl) {
-  // Construct URL with proxy if configured
-  const baseUrl = proxyUrl ? 
-    `${proxyUrl}?url=` : 
-    'https://play.google.com/store/apps/details?id=';
-    
-  const url = proxyUrl ? 
-    `${baseUrl}${encodeURIComponent(`https://play.google.com/store/apps/details?id=${appId}&hl=en&gl=${country}`)}` :
-    `${baseUrl}${appId}&hl=en&gl=${country}`;
+async function fetchAppDetails(appId, country, scraperApiUrl) {
+  // Construct URL for app details
+  const url = `${scraperApiUrl}?id=${encodeURIComponent(appId)}&country=${country || 'us'}&lang=en`;
   
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-  });
+  const response = await fetch(url);
   
   if (!response.ok) {
     throw new Error(`Failed to fetch app details: ${response.status}`);
   }
   
-  const html = await response.text();
+  const data = await response.json();
   
-  // Parse details from HTML (simplified)
-  const priceMatch = html.match(/<meta[^>]*itemprop="price"[^>]*content="([0-9.]+)"/) ||
-                     html.match(/<span[^>]*class="[^"]*VfPpfd[^"]*"[^>]*>(\$[0-9.]+)/);
-                     
-  const iconMatch = html.match(/<img[^>]*itemprop="image"[^>]*src="([^"]+)"/) ||
-                    html.match(/<img[^>]*alt="Icon"[^>]*src="([^"]+)"/);
-                    
-  const developerMatch = html.match(/<span[^>]*itemprop="name"[^>]*>([^<]+)<\/span>/);
-  
-  const scoreMatch = html.match(/<div[^>]*role="img"[^>]*aria-label="Rated ([0-9.]+) stars"/);
-  
-  const ratingsMatch = html.match(/<span[^>]*class="[^"]*wMUdtb[^"]*"[^>]*>([^<]+)<\/span>/);
-  
+  // Transform response to match expected format
   return {
-    price: priceMatch ? (priceMatch[1].startsWith('$') ? parseFloat(priceMatch[1].substring(1)) : parseFloat(priceMatch[1])) : undefined,
-    icon: iconMatch ? iconMatch[1] : undefined,
-    developer: developerMatch ? developerMatch[1].trim() : undefined,
-    scoreText: scoreMatch ? scoreMatch[1] : undefined,
-    ratings: ratingsMatch ? ratingsMatch[1].trim() : undefined
+    price: data.price,
+    icon: data.icon,
+    developer: data.developer,
+    scoreText: data.score,
+    ratings: data.ratings
   };
 }
 

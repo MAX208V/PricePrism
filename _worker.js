@@ -20,15 +20,12 @@ export default {
     // ==================== Static Assets ====================
     // Serve index.html for root and dashboard paths
     if (pathname === '/' || pathname === '/dashboard' || pathname === '/index.html') {
-      const html = await env.ASSETS?.fetch(new URL('/index.html', request.url)) 
-        || new Response(await import('./index.html?raw'), { headers: { 'Content-Type': 'text/html' } });
-      return html;
-    }
-
-    // Serve other static assets
-    if (!pathname.startsWith('/api/')) {
-      const asset = await env.ASSETS?.fetch(request);
-      if (asset && asset.status !== 404) return asset;
+      // When [site] is configured, Cloudflare handles static assets automatically
+      // Return a simple redirect to let Cloudflare serve the static file
+      return new Response('', {
+        status: 302,
+        headers: { 'Location': '/index.html' }
+      });
     }
 
     // ==================== API Routes ====================
@@ -187,17 +184,21 @@ async function checkPrices(env) {
       const price = await fetchPrice(app.id, app.country, config.proxy_url);
       const status = { 
         price, 
-        checked_at: new Date().toISOString(),
-        icon: status?.icon,
-        developer: status?.developer,
-        scoreText: status?.scoreText,
-        ratings: status?.ratings
+        checked_at: new Date().toISOString()
       };
+      
+      // Try to get existing status for additional info
+      const existingStatus = await env.KV.get(`status:${app.id}`, 'json') || {};
+      status.icon = existingStatus.icon || '';
+      status.developer = existingStatus.developer || '';
+      status.scoreText = existingStatus.scoreText || '';
+      status.ratings = existingStatus.ratings || '';
+      
       await env.KV.put(`status:${app.id}`, JSON.stringify(status));
       
       // Check threshold and notify if needed
       const shouldNotify = app.monitor_mode === 'change' 
-        ? price !== status.previous_price
+        ? price !== existingStatus.price
         : price > 0 && price < app.threshold;
       
       if (shouldNotify && config.sc3_key) {

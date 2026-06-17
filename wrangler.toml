@@ -1,7 +1,13 @@
 # wrangler.toml
-name = 'play-scraper-api'
-main = "_worker.js"
-compatibility_date = "2024-02-20"
+name = "price-monitor"
+main = "src/index.js"
+compatibility_date = "2023-10-30"
+keep_vars = true
+
+# 静态资源配置 (前端分离)
+[assets]
+directory = "./public"
+binding = "ASSETS"
 keep_vars = true
 
 # KV 存储（保存应用配置和通知状态）
@@ -9,6 +15,11 @@ keep_vars = true
 binding = "KV"
 id = "8b89d8b5c511457390f5aee4cce00570"
 
-# 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 * * * *"] # 每小时执行一次
+
+# 环境变量（这些是示例值，实际部署时应在 Cloudflare Dashboard 中设置为加密变量）
+[vars]
+# SCRAPER_API = "https://scraper.example.com"  # 替换为实际的 Scraper API 地址
+# SC3_UID = "your-sc3-uid"                     # 建议在 Cloudflare Dashboard 中设置为加密变量
+# SC3_SENDKEY = "your-sc3-sendkey"             # 建议在 Cloudflare Dashboard 中设置为加密变量

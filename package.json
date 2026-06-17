@@ -1,23 +1,21 @@
 {
   "name": "play-scraper-api",
   "version": "1.0.0",
-  "description": "Monitor Google Play Store app prices and send notifications",
-  "main": "_worker.js",
-  "type": "module",
-  "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev"
-  },
+  "description": "Cloudflare Worker for monitoring Play Store app prices with separated frontend and backend",
+  "private": true,
   "keywords": [
     "cloudflare",
     "workers",
-    "google-play",
-    "price-monitoring"
+    "play-store",
+    "price-monitoring",
+    "serverless"
   ],
-  "author": "Wise Design",
-  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "@cloudflare/workers-types": "^4.20240614.0",
+    "wrangler": "^3.57.2"
   }
 }

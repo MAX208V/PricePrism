@@ -1,4 +1,6 @@
 /* ==================== Wise Design System ==================== */
+/* Based on DESIGN_Wise.md */
+
 :root {
   /* Brand Colors */
   --primary: #9fe870;
@@ -20,19 +22,18 @@
   --positive: #2ead4b;
   --positive-deep: #054d28;
   --negative: #d03238;
-  --negative-deep: #a72027;
   --negative-bg: #320707;
   --warning: #ffd11a;
   --warning-deep: #b86700;
   
-  /* Radius */
+  /* Radius - Wise uses generous rounded corners */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-pill: 9999px;
   
-  /* Spacing */
+  /* Spacing - Base unit 4px */
   --space-xxs: 2px;
   --space-xs: 4px;
   --space-sm: 8px;
@@ -64,34 +65,42 @@
   }
 }
 
-/* Reset */
+/* ==================== Reset ==================== */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Base */
+/* ==================== Base ==================== */
 body {
   font-family: var(--font);
   font-size: 16px;
   line-height: 1.5;
   color: var(--ink);
   background: var(--canvas-soft);
-  min-height: 100dvh;
-  padding: var(--space-lg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Container */
-.container {
+/* ==================== Page Layout ==================== */
+.page {
+  min-height: 100dvh;
+}
+
+/* ==================== Hero Band ==================== */
+/* Wise风格: sage-tinted canvas as hero surface */
+.hero-band {
+  background: var(--canvas-soft);
+  padding: var(--space-3xl) var(--space-xl);
+  padding-top: var(--space-2xl);
+}
+
+.hero-content {
   max-width: 480px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
 }
 
-/* Logo Badge */
 .logo-badge {
   display: inline-flex;
   align-items: center;
@@ -103,13 +112,39 @@ body {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: -0.01em;
+  margin-bottom: var(--space-lg);
 }
 
 .logo-badge .material-symbols-rounded {
   font-size: 16px;
 }
 
-/* Card - Wise Style */
+.hero-title {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-sm);
+}
+
+.hero-subtitle {
+  font-size: 16px;
+  color: var(--body);
+  line-height: 1.6;
+}
+
+/* ==================== Main Content ==================== */
+.main-content {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ==================== Cards ==================== */
+/* Wise风格: 白色卡片圆角24px, 坐在sage canvas上 */
 .card {
   background: var(--canvas);
   border-radius: var(--radius-xl);
@@ -124,7 +159,7 @@ body {
   margin-bottom: var(--space-lg);
 }
 
-.card-header .material-symbols-rounded {
+.card-icon {
   font-size: 24px;
   color: var(--primary);
 }
@@ -133,9 +168,24 @@ body {
   font-size: 18px;
   font-weight: 900;
   letter-spacing: -0.02em;
+  flex: 1;
 }
 
-/* Search Input */
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-sm);
+  background: var(--primary-pale);
+  color: var(--positive-deep);
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ==================== Search ==================== */
 .search-box {
   display: flex;
   gap: var(--space-sm);
@@ -164,7 +214,8 @@ body {
   color: var(--mute);
 }
 
-/* Buttons */
+/* ==================== Buttons ==================== */
+/* Wise风格: 药丸形状按钮, lime-green主按钮 */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -177,6 +228,7 @@ body {
   border: none;
   outline: none;
   transition: background 0.2s, transform 0.1s;
+  white-space: nowrap;
 }
 
 .btn:active {
@@ -226,15 +278,33 @@ body {
   color: var(--primary);
 }
 
-/* Form */
-.form-group {
-  margin-bottom: var(--space-md);
+.btn-full {
+  width: 100%;
+  margin-top: var(--space-lg);
+}
+
+/* ==================== Form ==================== */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: var(--space-sm);
+}
+
+.form-row--align-center {
+  align-items: flex-end;
+}
+
+.form-field {
+  flex: 1;
+}
+
+.form-field--grow {
+  flex: 2;
 }
 
 .label {
@@ -247,6 +317,10 @@ body {
   margin-bottom: var(--space-xs);
 }
 
+.label-required {
+  color: var(--negative);
+}
+
 .label-optional {
   font-weight: 400;
   color: var(--mute);
@@ -254,26 +328,30 @@ body {
   letter-spacing: 0;
 }
 
-/* Toggle Switch */
-.toggle-wrapper {
+/* ==================== Toggle Switch ==================== */
+.toggle {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  user-select: none;
 }
 
-.toggle {
+.toggle-input {
+  display: none;
+}
+
+.toggle-slider {
   position: relative;
   width: 44px;
   height: 24px;
   background: var(--canvas-soft);
   border-radius: var(--radius-pill);
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
-.toggle::after {
+.toggle-slider::after {
   content: '';
   position: absolute;
   top: 2px;
@@ -285,118 +363,127 @@ body {
   transition: all 0.2s;
 }
 
-.toggle-input {
-  display: none;
-}
-
-.toggle-input:checked + .toggle {
+.toggle-input:checked + .toggle-slider {
   background: var(--primary);
 }
 
-.toggle-input:checked + .toggle::after {
+.toggle-input:checked + .toggle-slider::after {
   background: var(--ink);
   left: 22px;
 }
 
-/* App Card */
-.app-card {
-  background: var(--canvas);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  box-shadow: 0 4px 24px rgba(14, 15, 12, 0.06);
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
 }
 
-.app-header {
+/* ==================== Apps Grid ==================== */
+.apps-grid {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* ==================== App Card ==================== */
+.app-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  gap: var(--space-sm);
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--canvas-soft);
+  border-radius: var(--radius-lg);
+  transition: background 0.15s;
+}
+
+.app-card:hover {
+  background: var(--primary-pale);
 }
 
 .app-icon {
-  width: 44px;
-  height: 44px;
+  grid-row: span 2;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-sm);
   object-fit: cover;
-  background: var(--canvas-soft);
-}
-
-.app-info {
-  flex: 1;
-  min-width: 0;
+  background: var(--canvas);
 }
 
 .app-name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.app-id {
-  font-size: 11px;
+.app-meta {
+  font-size: 12px;
   color: var(--mute);
-  font-weight: 500;
-}
-
-.app-badge {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  padding: var(--space-xs) var(--space-md);
-  background: var(--primary-pale);
-  color: var(--positive-deep);
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.app-body {
-  padding: 0 var(--space-lg) var(--space-lg);
-}
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
 }
 
-.grid-item {
-  background: var(--canvas-soft);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
+.app-price {
+  text-align: right;
 }
 
-.grid-label {
-  font-size: 10px;
+.app-price-value {
+  font-size: 18px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--mute);
-  margin-bottom: 2px;
-}
-
-.grid-value {
-  font-size: 14px;
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.grid-value.success {
+.app-price-value.success {
   color: var(--positive);
+}
+
+.app-price-label {
+  font-size: 10px;
+  color: var(--mute);
+  text-transform: uppercase;
 }
 
 .app-actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
-/* Notification History */
+/* ==================== Badge ==================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-xxs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badge--success {
+  background: var(--primary-pale);
+  color: var(--positive-deep);
+}
+
+.badge--warning {
+  background: var(--warning);
+  color: var(--warning-deep);
+}
+
+/* ==================== History List ==================== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .history-item {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
   padding: var(--space-md) 0;
   border-bottom: 1px solid var(--canvas-soft);
 }
@@ -411,7 +498,7 @@ body {
   font-weight: 500;
   color: var(--mute);
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 70px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -421,108 +508,42 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
 }
 
 .history-price {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  font-size: 14px;
 }
 
 .history-badge {
-  padding: 2px var(--space-md);
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
   font-size: 10px;
   font-weight: 700;
 }
 
-.history-badge.notified {
+.history-badge--notified {
   background: var(--primary-pale);
   color: var(--positive-deep);
 }
 
-.history-badge.skipped {
+.history-badge--skipped {
   background: var(--canvas-soft);
   color: var(--body);
 }
 
-/* Empty State */
+/* ==================== Empty State ==================== */
 .empty-state {
   text-align: center;
   padding: var(--space-2xl);
   color: var(--mute);
   font-weight: 500;
-}
-
-/* Warning Banner */
-.warning-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  background: var(--warning);
-  color: var(--warning-deep);
-  border-radius: var(--radius-md);
-  padding: var(--space-md) var(--space-lg);
   font-size: 14px;
-  font-weight: 500;
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--ink);
-  color: var(--primary);
-  padding: var(--space-sm) var(--space-lg);
-  border-radius: var(--radius-pill);
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 10000;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-
-.toast.visible {
-  opacity: 1;
-}
-
-/* Modal Overlay */
-.overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.35);
-  z-index: 9999;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
-}
-
-.overlay.visible {
-  display: flex;
-}
-
-.modal {
-  background: var(--canvas);
-  border-radius: var(--radius-xl);
-  width: 100%;
-  max-width: 400px;
-  padding: var(--space-xl);
-}
-
-.modal-title {
-  font-size: 20px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  margin-bottom: var(--space-lg);
-}
-
-/* Search Results */
+/* ==================== Search Results ==================== */
 .search-results {
   margin-top: var(--space-md);
 }
@@ -548,10 +569,11 @@ body {
 }
 
 .search-item-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: var(--radius-sm);
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .search-item-info {
@@ -560,7 +582,7 @@ body {
 }
 
 .search-item-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -576,28 +598,137 @@ body {
 }
 
 .search-item-price {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--positive);
+  white-space: nowrap;
 }
 
-/* Loading */
+/* ==================== Loading ==================== */
 .loading {
   text-align: center;
   padding: var(--space-lg);
   color: var(--mute);
 }
 
-/* Footer */
+/* ==================== Modal ==================== */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.overlay.visible {
+  display: flex;
+}
+
+.modal {
+  background: var(--canvas);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-xl);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.modal-actions .btn {
+  flex: 1;
+}
+
+/* ==================== Detail Preview ==================== */
+.detail-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--canvas-soft);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.detail-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.detail-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-preview-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: var(--space-xxs);
+}
+
+.detail-preview-id {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+/* ==================== Toast ==================== */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--primary);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+/* ==================== Footer ==================== */
 .footer {
   text-align: center;
-  padding: var(--space-xl) 0;
+  padding: var(--space-2xl) var(--space-xl);
   font-size: 12px;
   color: var(--mute);
   font-weight: 500;
 }
 
-/* Material Icons */
+/* ==================== Material Icons ==================== */
 .material-symbols-rounded {
   font-family: 'Material Symbols Rounded';
   font-weight: normal;

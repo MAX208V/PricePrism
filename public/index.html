@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PricePrism - Play App 价格监控</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,21 +12,21 @@
 </head>
 <body>
   <div class="page">
-    <!-- Hero Band -->
+    <!-- Hero -->
     <header class="hero-band">
       <div class="hero-content">
         <span class="logo-badge">
           <span class="material-symbols-rounded">diamond</span>
           PricePrism
         </span>
-        <h1 class="hero-title">Google Play<br>价格监控</h1>
-        <p class="hero-subtitle">实时追踪应用价格变动，降价第一时间通知</p>
+        <h1 class="hero-title">Google Play 价格监控</h1>
+        <p class="hero-subtitle">实时追踪应用价格，折扣第一时间通知</p>
       </div>
     </header>
 
     <main class="main-content">
       <!-- Card 1: Search -->
-      <section class="card card-search">
+      <section class="card">
         <div class="card-header">
           <span class="material-symbols-rounded card-icon">search</span>
           <h2 class="card-title">搜索应用</h2>
@@ -41,7 +41,7 @@
       </section>
 
       <!-- Card 2: Monitored Apps -->
-      <section class="card card-apps">
+      <section class="card">
         <div class="card-header">
           <span class="material-symbols-rounded card-icon">monitoring</span>
           <h2 class="card-title">监控列表</h2>
@@ -53,20 +53,20 @@
       </section>
 
       <!-- Card 3: Add App -->
-      <section class="card card-add">
+      <section class="card">
         <div class="card-header">
           <span class="material-symbols-rounded card-icon">add_circle</span>
           <h2 class="card-title">添加应用</h2>
         </div>
         <form id="addForm" class="form" onsubmit="handleAddApp(event)">
           <div class="form-row">
-            <div class="form-field form-field--grow">
+            <div class="form-field">
               <label class="label">包名 <span class="label-required">*</span></label>
               <input type="text" class="input" name="app_id" placeholder="com.example.app" required>
             </div>
             <div class="form-field">
               <label class="label">地区</label>
-              <input type="text" class="input" name="country" value="us" style="width: 80px;">
+              <input type="text" class="input" name="country" value="us">
             </div>
           </div>
           <div class="form-row">
@@ -75,15 +75,15 @@
               <input type="text" class="input" name="name" placeholder="留空自动获取">
             </div>
             <div class="form-field">
-              <label class="label">降价阈值</label>
-              <input type="number" class="input" name="threshold" step="0.01" value="6.00" style="width: 100px;">
+              <label class="label">降价阈值 $</label>
+              <input type="number" class="input" name="threshold" step="0.01" value="6.00">
             </div>
           </div>
           <div class="form-field">
             <label class="label">备注</label>
             <input type="text" class="input" name="note" placeholder="可填写备注信息">
           </div>
-          <div class="form-row form-row--align-center">
+          <div class="form-footer">
             <label class="toggle">
               <input type="checkbox" class="toggle-input" name="monitor_mode">
               <span class="toggle-slider"></span>
@@ -91,14 +91,14 @@
             </label>
             <button type="submit" class="btn btn-primary">
               <span class="material-symbols-rounded">add</span>
-              添加监控
+              添加
             </button>
           </div>
         </form>
       </section>
 
-      <!-- Card 4: Notification History -->
-      <section class="card card-history">
+      <!-- Card 4: History -->
+      <section class="card">
         <div class="card-header">
           <span class="material-symbols-rounded card-icon">notifications</span>
           <h2 class="card-title">通知记录</h2>
@@ -131,7 +131,7 @@
         </div>
         <div class="form-row">
           <div class="form-field">
-            <label class="label">降价阈值</label>
+            <label class="label">降价阈值 $</label>
             <input type="number" class="input" id="editThreshold" step="0.01" required>
           </div>
           <div class="form-field">
@@ -141,16 +141,16 @@
         </div>
         <div class="form-field">
           <label class="label">备注</label>
-          <input type="text" class="input" id="editNote" placeholder="可填写备注信息">
+          <input type="text" class="input" id="editNote">
         </div>
-        <label class="toggle">
+        <label class="toggle" style="margin-bottom: var(--space-md);">
           <input type="checkbox" class="toggle-input" id="editMonitorMode">
           <span class="toggle-slider"></span>
           <span class="toggle-label">价格变动时通知</span>
         </label>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
-          <button type="submit" class="btn btn-primary">保存更改</button>
+          <button type="submit" class="btn btn-primary">保存</button>
         </div>
       </form>
     </div>
@@ -166,21 +166,21 @@
         </button>
       </div>
       <div id="detailContent" class="detail-preview"></div>
-      <div class="form-field">
-        <label class="label">降价阈值</label>
-        <input type="number" class="input" id="detailThreshold" step="0.01" value="6.00">
-      </div>
       <div class="form-row">
+        <div class="form-field">
+          <label class="label">降价阈值 $</label>
+          <input type="number" class="input" id="detailThreshold" step="0.01" value="6.00">
+        </div>
         <div class="form-field">
           <label class="label">地区</label>
           <input type="text" class="input" id="detailCountry" value="us">
         </div>
-        <div class="form-field">
-          <label class="label">备注</label>
-          <input type="text" class="input" id="detailNote" placeholder="可选">
-        </div>
       </div>
-      <label class="toggle">
+      <div class="form-field">
+        <label class="label">备注</label>
+        <input type="text" class="input" id="detailNote">
+      </div>
+      <label class="toggle" style="margin-bottom: var(--space-md);">
         <input type="checkbox" class="toggle-input" id="detailMonitorMode">
         <span class="toggle-slider"></span>
         <span class="toggle-label">价格变动时通知</span>

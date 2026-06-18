@@ -100,6 +100,9 @@ export async function handleAppsApi(request, env) {
   if (request.method === "DELETE") {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
+    // 先删除关联数据，再删应用
+    await DB.prepare("DELETE FROM price_history WHERE app_id = ?").bind(body.app_id).run();
+    await DB.prepare("DELETE FROM notifications WHERE app_id = ?").bind(body.app_id).run();
     await DB.prepare("DELETE FROM apps WHERE id = ?").bind(body.app_id).run();
     return jsonResponse({ ok: true });
   }
@@ -110,7 +113,7 @@ export async function handleAppsApi(request, env) {
     const fields = [];
     const values = [];
     for (const [k, v] of Object.entries(body)) {
-      if (k === "app_id" || k === "id") continue;
+      if (k === "app_id" || k === "id" || k === "countries") continue;
       if (k === "monitor_iap") { fields.push("monitor_iap=?"); values.push(v ? 1 : 0); continue; }
       fields.push(k + "=?");
       values.push(v);

@@ -14,7 +14,6 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // API 端点
     if (path === "/api/dashboard") return handleDashboard(env);
     if (path === "/api/apps") return handleAppsApi(request, env);
     if (path === "/api/check") return handleCheck(env);
@@ -24,7 +23,6 @@ export default {
     if (path === "/api/app-detail") return handleAppDetail(request, env);
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 
-    // 静态资源由 Cloudflare Assets 处理
     const response = await env.ASSETS.fetch(request);
     if (response.status === 404) {
       return env.ASSETS.fetch(new URL('/index.html', url.origin));
@@ -71,7 +69,6 @@ async function handleAppsApi(request, env) {
       return jsonResponse({ error: "App already exists" }, 409);
     }
     
-    // 如果没有提供 name，尝试从 API 获取
     let name = body.name;
     let icon = null;
     if (!name || name.trim() === "") {
@@ -95,12 +92,13 @@ async function handleAppsApi(request, env) {
       currency: DEFAULT_CURRENCY,
       note: body.note || "",
       monitor_mode: body.monitor_mode || "threshold",
+      monitor_iap: body.monitor_iap || false,
+      iap_threshold: body.iap_threshold || null,
       created_at: new Date().toISOString()
     });
     
     await env.KV.put("config:apps", JSON.stringify(apps));
     
-    // 创建或更新状态 KV
     const statusKey = "status:" + body.app_id;
     const status = await env.KV.get(statusKey, "json") || {};
     if (icon) status.icon = icon;
@@ -144,6 +142,29 @@ async function handleAppsApi(request, env) {
   return jsonResponse({ error: "Method not allowed" }, 405);
 }
 
+// ==================== 解析内购价格区间 ====================
+function parseIAPRange(rangeStr) {
+  if (!rangeStr) return null;
+  const clean = rangeStr.replace(/\s*per\s*item\s*$/i, '').trim();
+  const parts = clean.split('-').map(s => s.trim());
+  if (parts.length < 1) return null;
+  
+  const toNum = (s) => {
+    const m = s.match(/[\d.]+/);
+    return m ? parseFloat(m[0]) : null;
+  };
+  
+  const min = toNum(parts[0]);
+  const max = parts.length > 1 ? toNum(parts[parts.length - 1]) : min;
+  
+  if (min === null) return null;
+  
+  const currencyMatch = clean.match(/^([^\d.]+)/);
+  const currencySymbol = currencyMatch ? currencyMatch[1].trim() : '$';
+  
+  return { min, max, text: clean, currencySymbol };
+}
+
 // ==================== Check API ====================
 async function handleCheck(env) {
   const res = await monitorAndNotify(env);
@@ -167,30 +188,21 @@ async function handleStatus(env) {
 }
 
 // ==================== Search API ====================
-// 使用 Google Play API 搜索
-// GET /api/search?term=xxx
 async function handleSearch(request, env) {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
-  
   if (!term) return jsonResponse({ error: "term required" }, 400);
   
   const playApi = env.PLAY_API;
   if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
   
   try {
-    // Google Play API 搜索格式: GET /api/apps/?q=xxx
     const resp = await fetch(`${playApi}/api/apps/?q=${encodeURIComponent(term)}&country=us&lang=en`, {
       headers: { Accept: "application/json" }
     });
-    
-    if (!resp.ok) {
-      return jsonResponse({ error: `API error: ${resp.status}` }, 500);
-    }
-    
+    if (!resp.ok) return jsonResponse({ error: `API error: ${resp.status}` }, 500);
     const data = await resp.json();
     
-    // 转换为前端期望的格式
     const results = (data.results || []).map(app => ({
       appId: app.appId,
       title: app.title,
@@ -214,7 +226,6 @@ async function handleSearch(request, env) {
 }
 
 // ==================== App Detail API ====================
-// GET /api/app-detail?appId=xxx&country=us
 async function handleAppDetail(request, env) {
   const url = new URL(request.url);
   const appId = url.searchParams.get("appId");
@@ -228,8 +239,8 @@ async function handleAppDetail(request, env) {
       headers: { Accept: "application/json" }
     });
     if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
-    
     const d = await resp.json();
+    
     return jsonResponse({
       ok: true,
       title: d.title,
@@ -251,18 +262,14 @@ async function handleAppDetail(request, env) {
 }
 
 // ==================== 获取应用详情 ====================
-// 使用 Google Play API: GET /api/apps/{appId}
 async function fetchAppInfo(env, appId, country = DEFAULT_COUNTRY) {
   const playApi = env.PLAY_API;
   if (!playApi) return null;
-  
   try {
     const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${country}`, {
       headers: { Accept: "application/json" }
     });
-    
     if (!resp.ok) return null;
-    
     const data = await resp.json();
     return {
       title: data.title,
@@ -280,16 +287,13 @@ async function fetchAppInfo(env, appId, country = DEFAULT_COUNTRY) {
 }
 
 // ==================== 获取应用价格 ====================
-// 使用 Google Play API: GET /api/apps/{appId}
 async function fetchAppPrice(playApi, appId, country, lang) {
   try {
     const resp = await fetch(
       `${playApi}/api/apps/${encodeURIComponent(appId)}?country=${country}&lang=${lang}`,
       { headers: { Accept: "application/json" } }
     );
-    
     if (!resp.ok) throw new Error(`API ${resp.status}`);
-    
     const data = await resp.json();
     return {
       ok: true,
@@ -316,13 +320,8 @@ async function monitorAndNotify(env) {
   const playApi = env.PLAY_API;
   const sc3Url = env.SC3_URL;
   
-  if (!playApi) {
-    return { ok: false, error: "Missing PLAY_API environment variable" };
-  }
-  
-  if (!sc3Url) {
-    return { ok: false, error: "Missing SC3_URL environment variable" };
-  }
+  if (!playApi) return { ok: false, error: "Missing PLAY_API" };
+  if (!sc3Url) return { ok: false, error: "Missing SC3_URL" };
   
   const apps = await getApps(env);
   if (!apps.length) return { ok: true, message: "No apps configured" };
@@ -335,12 +334,12 @@ async function monitorAndNotify(env) {
       results.push({ app_id: app.id, name: app.name, ok: false, error: e.message });
     }
   }
-  
   return { ok: true, results };
 }
 
+// ==================== Check App ====================
 async function checkApp(app, playApi, env, sc3Url) {
-  const { id, name, country, lang, threshold, monitor_mode, note } = app;
+  const { id, name, country, lang, threshold, monitor_mode, note, monitor_iap, iap_threshold } = app;
   
   const priceInfo = await fetchAppPrice(playApi, id, country, lang);
   if (!priceInfo || !priceInfo.ok) {
@@ -373,112 +372,88 @@ async function checkApp(app, playApi, env, sc3Url) {
   
   let notified = false;
   let reason = null;
+  let iapNotified = false;
+  let iapReason = null;
   
-  // 阈值模式：价格低于阈值时通知（仅对付费应用）
+  // 主价格监控
   if (monitor_mode !== "change" && !free && price > 0) {
     const below = price < threshold;
-    
     if (below) {
       const last = status.last_notified_price;
       if (last === undefined || last === null) {
-        notified = true;
-        reason = "first_drop";
+        notified = true; reason = "first_drop";
       } else if (price < last) {
-        notified = true;
-        reason = "price_dropped";
-      } else if (price === last) {
-        notified = false;
-        reason = "price_unchanged";
-      } else {
-        notified = false;
-        reason = "price_rose";
+        notified = true; reason = "price_dropped";
       }
     }
   } else if (monitor_mode === "change") {
-    // 变动模式：任何价格变动都通知
     const lastPrice = status.last_checked_price;
     const lastFree = status.last_checked_free;
-    
-    // 价格变动（免费↔付费 或 价格数值变化）
     if (lastPrice !== undefined && (price !== lastPrice || free !== lastFree)) {
-      notified = true;
-      reason = "price_changed";
-      
-      if (status.initial_price === undefined && !free) {
-        status.initial_price = price;
+      notified = true; reason = "price_changed";
+      if (status.initial_price === undefined && !free) status.initial_price = price;
+    }
+  }
+  
+  // IAP 内购价格监控
+  const iapInfo = parseIAPRange(priceInfo.IAPRange);
+  if (iapInfo && (monitor_iap || iap_threshold)) {
+    const iapThresh = iap_threshold || 0;
+    status.iapRangeData = iapInfo;
+    status.last_iap_min_price = iapInfo.min;
+    
+    if (iapThresh > 0 && iapInfo.min < iapThresh) {
+      const lastIapMin = status.last_iap_notified_price;
+      if (lastIapMin === undefined || lastIapMin === null) {
+        iapNotified = true;
+        iapReason = "first_drop";
+          } else if (iapInfo.min < lastIapMin) {
+        iapNotified = true;
+        iapReason = "dropped";
       }
     }
   }
   
+  // 通知处理
   if (notified) {
-    const title = monitor_mode !== "change" 
-      ? `${name} 降价啦！` 
-      : `${name} 价格变动`;
-    
-    let desp = free 
-      ? `**状态: 免费**\n\n`
-      : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
-    
-    if (monitor_mode !== "change" && !free) {
-      desp += `已低于阈值 ${cur === 'USD' ? '$' : ''}${threshold} ${cur}\n\n`;
-    } else if (status.initial_price !== undefined && !free) {
-      desp += `原价: ${cur === 'USD' ? '$' : ''}${status.initial_price} ${cur}\n\n`;
-    }
-    
+    const title = name + (monitor_mode !== "change" ? " 降价啦！" : " 价格变动");
+    let desp = free ? "**状态: 免费**\n\n" : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
+    if (monitor_mode !== "change" && !free) desp += `已低于阈值 $${threshold}\n\n`;
     desp += `- 应用ID: \`${id}\`\n`;
     if (note) desp += `- 备注: ${note}\n`;
-    desp += `- 时间: ${new Date().toISOString()}\n\n`;
     desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;
-    
     await sendSc3(sc3Url, title, desp);
     
     status.last_notified_price = price;
     status.last_notified_at = new Date().toISOString();
-    
-    await appendHistory(env, {
-      app_id: id,
-      name,
-      price,
-      threshold,
-      time: new Date().toISOString(),
-      notified: true
-    });
-    
-    await env.KV.put(statusKey, JSON.stringify(status));
-    
-    return {
-      app_id: id,
-      name,
-      ok: true,
-      price,
-      currency: cur,
-      free,
-      threshold,
-      notified: true,
-      reason,
-      icon,
-      score,
-      scoreText,
-      installs
-    };
+    await appendHistory(env, { app_id: id, name, price, threshold, time: new Date().toISOString(), notified: true, type: 'price' });
   }
   
+  if (iapNotified) {
+    const title = `${name} 内购降价啦！`;
+    let desp = `**最低内购价: ${iapInfo.currencySymbol}${iapInfo.min}**\n\n`;
+    desp += `内购价格区间: ${iapInfo.text}\n\n`;
+    if (iap_threshold) desp += `已低于内购阈值 $${iap_threshold}\n\n`;
+    desp += `- 应用ID: \`${id}\`\n`;
+    if (note) desp += `- 备注: ${note}\n`;
+    desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;
+    await sendSc3(sc3Url, title, desp);
+    
+    status.last_iap_notified_price = iapInfo.min;
+    status.last_iap_notified_at = new Date().toISOString();
+    await appendHistory(env, { app_id: id, name: name + ' (内购)', price: iapInfo.min, threshold: iap_threshold, time: new Date().toISOString(), notified: true, type: 'iap' });
+  }
+  
+  status.last_checked = new Date().toISOString();
   await env.KV.put(statusKey, JSON.stringify(status));
   
   return {
-    app_id: id,
-    name,
-    ok: true,
-    price,
-    currency: cur,
-    free,
-    threshold,
-    notified: false,
-    reason,
-    icon,
-    score,
-    scoreText,
-    installs
+    app_id: id, name, ok: true, price, currency: cur, free, threshold,
+    notified: notified || iapNotified,
+    reason: iapNotified ? (iapReason || 'iap') : reason,
+    iap: iapInfo,
+    iapNotified,
+    icon, score, scoreText, installs
   };
 }
 
@@ -505,9 +480,6 @@ async function appendHistory(env, entry) {
 function jsonResponse(data, status) {
   return new Response(JSON.stringify(data), {
     status: status || 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
-    }
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
   });
 }

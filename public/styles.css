@@ -352,6 +352,15 @@ body {
   white-space: nowrap;
 }
 
+.app-card-id {
+  font-size: 11px;
+  color: var(--mute);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .app-card-meta {
   font-size: 11px;
   color: var(--mute);
@@ -374,6 +383,10 @@ body {
   font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.app-card-price-value {
+  line-height: 1;
 }
 
 .app-card-price.success { color: var(--positive); }

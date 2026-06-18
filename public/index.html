@@ -26,10 +26,16 @@
     </div>
     <div id="searchResults" class="search-results"></div>
 
-    <div class="add-collapse" onclick="toggleAddForm()">
-      <span class="material-symbols-rounded">add_circle</span>
-      <span>添加手动监控</span>
-      <span class="material-symbols-rounded add-arrow">expand_more</span>
+    <div class="add-collapse">
+      <span class="notif-toggle" onclick="toggleNotifHistory()" title="通知记录">
+        <span class="material-symbols-rounded">notifications</span>
+        <span class="notif-badge" id="historyCount">0</span>
+      </span>
+      <span class="add-form-toggle" onclick="toggleAddForm()">
+        <span class="material-symbols-rounded">add_circle</span>
+        <span>添加手动监控</span>
+        <span class="material-symbols-rounded add-arrow">expand_more</span>
+      </span>
     </div>
     <form class="add-form" id="addForm" onsubmit="handleAddApp(event)" style="display:none;">
       <div class="form-field"><label class="label">包名 *</label><input type="text" class="input" name="app_id" required placeholder="com.example.app"></div>
@@ -44,15 +50,7 @@
     </form>
 
     <!-- 通知记录（合入搜索卡片） -->
-    <div class="history-inline" id="historyInline">
-      <div class="add-collapse" onclick="toggleNotifHistory()">
-        <span class="material-symbols-rounded">notifications</span>
-        <span>通知记录</span>
-        <span class="card-badge" id="historyCount" style="margin-left:auto;margin-right:4px;">0</span>
-        <span class="material-symbols-rounded notif-arrow" id="notifArrow">expand_less</span>
-      </div>
-      <div id="historyList" class="history-list"></div>
-    </div>
+    <div id="historyList" class="history-list" style="display:block;"></div>
   </section>
 
   <!-- 监控列表卡片 -->

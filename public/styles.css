@@ -141,14 +141,47 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   margin-top: var(--space-md);
   padding-top: var(--space-md);
   border-top: 1px dashed var(--canvas);
-  cursor: pointer;
   font-size: 12px;
   font-weight: 600;
   color: var(--mute);
-  transition: color .15s;
 }
-.add-collapse:hover { color: var(--body); }
-.add-collapse .material-symbols-rounded { font-size: 18px; }
+.notif-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: opacity .15s;
+  position: relative;
+}
+.notif-toggle:hover { opacity: .7; }
+.notif-toggle .material-symbols-rounded { font-size: 18px; }
+.notif-badge:empty { display: none; }
+.notif-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--primary);
+  color: var(--positive-deep);
+  min-width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  border-radius: 99px;
+  padding: 0 4px;
+  position: absolute;
+  top: -6px;
+  right: -10px;
+}
+.add-form-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-left: var(--space-xs);
+}
+.add-form-toggle:hover { opacity: .7; }
+.add-form-toggle .material-symbols-rounded { font-size: 18px; }
+.add-collapse:hover { opacity: 1; }
 .add-arrow { transition: transform .2s; }
 
 /* App Cards */
@@ -230,26 +263,7 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .toggle-label { font-size: 12px; color: var(--body); }
 
 /* History */
-.history-inline {
-  margin-top: var(--space-md);
-  border-top: 2px solid var(--canvas);
-  padding-top: 0;
-}
-.history-inline .add-collapse {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  cursor: pointer;
-  padding: var(--space-sm) 0;
-  font-size: 13px;
-  font-weight: 500;
-  transition: opacity .15s;
-}
-.history-inline .add-collapse:hover { opacity: .7; }
-.history-inline .add-collapse .material-symbols-rounded {
-  font-size: 18px;
-  color: var(--mute);
-}
+
 
 .history-item { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) 0; font-size: 12px; }
 .history-item + .history-item { border-top: 1px solid var(--canvas-soft); }

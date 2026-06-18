@@ -329,7 +329,6 @@ function closeDetailModal() {
 async function addFromDetail() {
   if (!detailData) return;
   const threshold = parseFloat(document.getElementById('detailThreshold').value);
-  const country = document.getElementById('detailCountry').value.trim() || 'us';
   const note = document.getElementById('detailNote').value.trim();
   const monitorMode = document.getElementById('detailMonitorMode').checked;
   if (isNaN(threshold) || threshold <= 0) { showToast('请输入有效阈值'); return; }
@@ -337,9 +336,9 @@ async function addFromDetail() {
     await api('/api/apps', {
       method: 'POST',
       body: JSON.stringify({
-        app_id: detailData.id, name: detailData.title, threshold, country, note,
+        app_id: detailData.id, name: detailData.title, threshold, country: 'us', note,
         monitor_mode: monitorMode ? 'change' : 'threshold',
-        countries: [country]
+        countries: ['us']
       })
     });
     showToast('已添加到监控列表');

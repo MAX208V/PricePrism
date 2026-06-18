@@ -62,7 +62,7 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   line-height: 1.5;
   display: inline-block;
   text-align: center;
-  min-width: 24px;
+  min-width: 12px;
   box-sizing: content-box;
 }
 

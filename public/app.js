@@ -319,6 +319,15 @@ async function deleteApp(id) {
     setTimeout(() => location.reload(), 500);
   } catch (e) { showToast(e.message); }
 }
+// ---- 主数据加载 ----
+async function loadDashboard() {
+  try {
+    const data = await api('/api/dashboard');
+    renderApps(data.apps);
+    renderHistory(data.history);
+  } catch (e) { showToast('加载失败: ' + e.message); }
+}
+
 // ---- Init ----
 document.getElementById('searchInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') { e.preventDefault(); doSearch(); }

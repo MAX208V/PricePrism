@@ -409,9 +409,57 @@ body {
   margin-top: var(--space-sm);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--canvas);
+  cursor: pointer;
+}
+
+.iap-expand-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-size: 11px;
   color: var(--positive-deep);
   font-weight: 600;
+}
+
+.iap-expand-toggle .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.iap-range-text {
+  flex: 1;
+}
+
+.iap-arrow {
+  transition: transform 0.2s;
+}
+
+.iap-detail {
+  display: none;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--canvas);
+}
+
+.iap-info {
+  font-size: 12px;
+  color: var(--body);
+  margin-bottom: var(--space-sm);
+}
+
+.iap-info strong {
+  color: var(--positive-deep);
+}
+
+.iap-monitor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.iap-threshold-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
 .app-card-actions {

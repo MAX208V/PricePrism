@@ -95,7 +95,10 @@ function renderApps(apps) {
     const hasIAP = !!st.IAPRange;
     const monitorIAP = app.monitor_iap || false;
     const iapThreshold = app.iap_threshold || '';
-    const appCountries = app.countries || [app.country || 'us'];
+    const appCountries = (() => {
+    try { return typeof app.countries === 'string' ? JSON.parse(app.countries) : (app.countries || [app.country || 'us']); }
+    catch(e) { return [app.country || 'us']; }
+  })();
     const pricesByCountry = st.prices_by_country || {};
 
     return sep + '<div class="app-card">' +

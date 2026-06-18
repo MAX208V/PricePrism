@@ -45,6 +45,15 @@ export default {
 };
 
 // ==================== 工具函数 ====================
+function parseCountries(app) {
+  if (!app) return ["us"];
+  try {
+    if (typeof app.countries === 'string') return JSON.parse(app.countries);
+    if (Array.isArray(app.countries)) return app.countries;
+  } catch (e) {}
+  return [app.country || "us"];
+}
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -92,7 +101,8 @@ async function handleDashboard(env) {
   const list = [];
   for (const app of apps) {
     const st = await KV.get("status:" + app.id, "json") || {};
-    list.push({ ...app, status: st });
+    const parsedApp = { ...app, countries: JSON.stringify(parseCountries(app)) };
+    list.push({ ...parsedApp, status: st });
   }
 
   let history = [];
@@ -114,7 +124,8 @@ async function handleAppsApi(request, env) {
     const result = [];
     for (const app of apps.results || []) {
       const st = await KV.get("status:" + app.id, "json") || {};
-      result.push({ ...app, status: st });
+      const parsed = { ...app, countries: JSON.stringify(parseCountries(app)) };
+      result.push({ ...parsed, status: st });
     }
     return jsonResponse(result);
   }

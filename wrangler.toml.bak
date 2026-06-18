@@ -1,19 +1,30 @@
 # wrangler.toml
-name = 'PricePrism'
+name = 'price-prism'
 main = '_worker.js'
 compatibility_date = "2024-02-20"
 keep_vars = true
 
-# KV 存储（保存应用配置和通知状态）
+# KV 存储（状态缓存层）
 [[kv_namespaces]]
 binding = "KV"
 id = "8b89d8b5c511457390f5aee4cce00570"
 
-# 添加定时触发器：每小时的第 0 分钟执行一次（UTC时间）
+# D1 数据库（应用配置、价格走势、通知记录）
+[[d1_databases]]
+binding = "DB"
+database_name = "priceprism-db"
+database_id = ""
+
+# R2 存储桶（应用图标缓存）
+[[r2_buckets]]
+binding = "ICONS"
+bucket_name = "priceprism-icons"
+
+# 定时触发器：每 1 小时执行（UTC）
 [triggers]
 crons = ["0 * * * *"]
 
-# 静态资源配置 - 托管前端 HTML
+# 静态资源
 [assets]
 directory = "public"
 binding = "ASSETS"

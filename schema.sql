@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS apps (
   updated_at TEXT,
   base_price REAL,
   base_currency TEXT DEFAULT 'USD',
+  threshold_type TEXT DEFAULT 'amount',
+  threshold_pct REAL,
   last_price REAL,
   last_free INTEGER DEFAULT 0,
   last_currency TEXT DEFAULT 'USD',

@@ -95,7 +95,7 @@
     </div>
     <div class="modal-body">
       <div class="form-field"><label class="label">应用名称</label><input type="text" class="input" id="editName"></div>
-      <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" id="editThreshold" step="0.01" min="0.01"></div>
+      <div class="form-field"><label class="label">阈值类型</label><select class="input" id="editThresholdType" onchange="document.getElementById('editThresholdPctRow').style.display=this.value==='percent'?'':'none'"><option value="amount">金额 $</option><option value="percent">百分比 %</option></select></div><div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" id="editThreshold" step="0.01" min="0.01"></div><div class="form-field" id="editThresholdPctRow" style="display:none"><label class="label">降价百分比 %</label><input type="number" class="input" id="editThresholdPct" step="1" min="1" max="100" value="20"></div>
       <div class="form-field"><label class="label">基准价格 $</label><input type="number" class="input" id="editBasePrice" step="0.01" min="0" placeholder="留空为无基准"></div>
       <div class="form-field"><label class="label">备注</label><input type="text" class="input" id="editNote"></div>
       <div class="form-field"><label class="label">监控区域 <button type="button" class="btn btn--ghost btn--sm" onclick="toggleCountryPicker('editCountries')" style="font-size:11px;">选择区域</button></label>

@@ -89,6 +89,8 @@ function renderApps(apps) {
     const isFree = app.last_free;
     const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: app.last_offers_iap, containsAds: app.last_contains_ads, IAPRange: app.last_iap_range || "" });
     const threshold = app.threshold;
+    const thresholdType = app.threshold_type || 'amount';
+    const thresholdPct = app.threshold_pct || 20;
     const isBelow = !isFree && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
     const icon = app.icon_data || app.last_icon || '';
@@ -126,7 +128,7 @@ function renderApps(apps) {
           '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\'' + escapeHtml(app.id) + '\',this)" style="cursor:pointer;">' +
             '<div class="app-card-price-value">' + priceInfo.text + '</div>' +
           '</div>' +
-          '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : '阈值 $' + threshold) + '</div>' +
+          '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : thresholdType === 'percent' ? '阈值 ' + thresholdPct + '%' : '阈值 $' + threshold) + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="app-card-trend" id="trend-' + escapeHtml(app.id) + '" style="display:none;">' +
@@ -428,6 +430,8 @@ async function handleEditApp() {
       body: JSON.stringify({
         app_id: editingAppId, name, threshold, note,
         base_price: parseFloat(document.getElementById('editBasePrice').value) || null,
+        threshold_type: document.getElementById('editThresholdType').value,
+        threshold_pct: parseFloat(document.getElementById('editThresholdPct').value) || 20,
         monitor_mode: monitorMode ? 'change' : 'threshold',
         countries: selectedCountries,
         monitor_iap: monitorIAP, iap_threshold: iapThreshold

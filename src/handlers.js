@@ -75,9 +75,9 @@ export async function handleAppsApi(request, env) {
 
     await DB.prepare(
       `INSERT INTO apps
-       (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,
+       (id,name,threshold,country,countries,lang,note,monitor_mode,threshold_type,threshold_pct,monitor_iap,iap_threshold,
         created_at,updated_at,last_icon,last_price,last_free,last_currency,base_price,base_currency,last_notified_price)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       body.app_id, name || body.app_id,
       body.threshold ?? DEFAULT_THRESHOLD,
@@ -86,6 +86,8 @@ export async function handleAppsApi(request, env) {
       body.lang || DEFAULT_LANG,
       body.note || "",
       body.monitor_mode || "threshold",
+      body.threshold_type || "amount",
+      body.threshold_pct || null,
       body.monitor_iap ? 1 : 0,
       body.iap_threshold || null,
       now, now,

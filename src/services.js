@@ -71,7 +71,12 @@ export async function checkApp(app, env) {
 
   // 主价格监控
   if (monitor_mode !== "change" && !free && price > 0) {
-    if (price < threshold) {
+    let effectiveThreshold = threshold;
+    // 百分比阈值: threshold_pct% off from base_price
+    if (app.threshold_type === 'percent' && app.base_price !== null && app.base_price !== undefined && app.base_price > 0) {
+      effectiveThreshold = app.base_price * (1 - (app.threshold_pct || 20) / 100);
+    }
+    if (price < effectiveThreshold) {
       const last = app.last_notified_price;
       if (last !== undefined && last !== null && price < last) { notified = true; reason = "price_dropped"; }
     }
@@ -95,7 +100,10 @@ export async function checkApp(app, env) {
   if (notified) {
     const title = name + (monitor_mode !== "change" ? " 降价啦！" : " 价格变动");
     let desp = free ? "**状态: 免费**\n\n" : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
-    if (monitor_mode !== "change" && !free) desp += `已低于阈值 $${threshold}\n\n`;
+    if (monitor_mode !== "change" && !free) {
+      if (app.threshold_type === 'percent') desp += `已低于百分比阈值 ${app.threshold_pct || 20}% (基准价 $${app.base_price})\n\n`;
+      else desp += `已低于阈值 $${threshold}\n\n`;
+    }
     desp += `- 应用ID: \`${id}\`\n`;
     if (note) desp += `- 备注: ${note}\n`;
     desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;

@@ -230,7 +230,27 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .toggle-label { font-size: 12px; color: var(--body); }
 
 /* History */
-.history-list { }
+.history-inline {
+  margin-top: var(--space-md);
+  border-top: 2px solid var(--canvas);
+  padding-top: 0;
+}
+.history-inline .add-collapse {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  padding: var(--space-sm) 0;
+  font-size: 13px;
+  font-weight: 500;
+  transition: opacity .15s;
+}
+.history-inline .add-collapse:hover { opacity: .7; }
+.history-inline .add-collapse .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--mute);
+}
+
 .history-item { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) 0; font-size: 12px; }
 .history-item + .history-item { border-top: 1px solid var(--canvas-soft); }
 .history-time { color: var(--mute); flex-shrink: 0; width: 56px; }

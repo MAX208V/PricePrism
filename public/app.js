@@ -241,9 +241,16 @@ async function setIAPThreshold(appId, value) {
 function renderHistory(history) {
   const container = document.getElementById('historyList');
   const countEl = document.getElementById('historyCount');
-  countEl.textContent = history ? history.length : 0;
+  if (countEl) countEl.textContent = history ? history.length : 0;
+  // 从 localStorage 读取折叠状态（默认展开）
+  const shown = localStorage.getItem('notif_visible') !== 'false';
+  if (container) {
+    container.style.display = shown ? '' : 'none';
+    const arrow = document.getElementById('notifArrow');
+    if (arrow) arrow.textContent = shown ? 'expand_less' : 'expand_more';
+  }
   if (!history || history.length === 0) {
-    container.innerHTML = '<div class="empty-state">暂无记录</div>';
+    if (container) container.innerHTML = '<div class="empty-state">暂无记录</div>';
     return;
   }
   container.innerHTML = history.map(h => {
@@ -445,6 +452,16 @@ async function checkPrices() {
 }
 
 // ---- 添加表单折叠 ----
+function toggleNotifHistory() {
+  const list = document.getElementById('historyList');
+  const arrow = document.getElementById('notifArrow');
+  if (!list) return;
+  const shown = list.style.display !== 'none';
+  list.style.display = shown ? 'none' : '';
+  if (arrow) arrow.textContent = shown ? 'expand_more' : 'expand_less';
+  localStorage.setItem('notif_visible', shown ? 'false' : 'true');
+}
+
 function toggleAddForm() {
   const form = document.getElementById('addForm');
   const arrow = document.querySelector('.add-arrow');

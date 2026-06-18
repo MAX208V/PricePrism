@@ -42,6 +42,17 @@
       <label class="toggle"><input type="checkbox" class="toggle-input" name="monitor_mode"><span class="toggle-slider"></span><span class="toggle-label">价格变动时通知（任意变化）</span></label>
       <button class="btn btn--primary btn--full" type="submit">添加</button>
     </form>
+
+    <!-- 通知记录（合入搜索卡片） -->
+    <div class="history-inline" id="historyInline">
+      <div class="add-collapse" onclick="toggleNotifHistory()">
+        <span class="material-symbols-rounded">notifications</span>
+        <span>通知记录</span>
+        <span class="card-badge" id="historyCount" style="margin-left:auto;margin-right:4px;">0</span>
+        <span class="material-symbols-rounded notif-arrow" id="notifArrow">expand_less</span>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </div>
   </section>
 
   <!-- 监控列表卡片 -->
@@ -57,15 +68,7 @@
     <div id="appsList"></div>
   </section>
 
-  <!-- 通知记录卡片 -->
-  <section class="card card--list">
-    <div class="card-header">
-      <span class="card-logo"><span class="material-symbols-rounded">notifications</span></span>
-      <span class="card-title">通知记录</span>
-      <span class="card-badge" id="historyCount">0</span>
-    </div>
-    <div id="historyList" class="history-list"></div>
-  </section>
+
 
 </main>
 

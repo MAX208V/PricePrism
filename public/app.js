@@ -44,7 +44,7 @@ function getPriceDisplay(r) {
   } else {
     text = '$' + parseFloat(r.price).toFixed(2);
   }
-  return { text, isFree, offersIAP: iap, containsAds: ads };
+  return { text, isFree, offersIAP: iap, containsAds: ads, iapRange: r.IAPRange || '' };
 }
 
 // ==================== Escape HTML ====================
@@ -84,7 +84,7 @@ function renderApps(apps) {
     const st = app.status || {};
     const price = st.last_checked_price;
     const isFree = st.last_checked_free;
-    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: st.offersIAP, containsAds: st.containsAds });
+    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: st.offersIAP, containsAds: st.containsAds, IAPRange: st.IAPRange });
     const threshold = app.threshold;
     const isBelow = !isFree && !app.monitor_mode && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
@@ -111,6 +111,7 @@ function renderApps(apps) {
             '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : '阈值 $' + threshold) + '</div>',
           '</div>',
         '</div>',
+        priceInfo.iapRange ? '<div class="app-card-iap"><span class="material-symbols-rounded" style="font-size:13px;vertical-align:middle;margin-right:4px;">payments</span>' + escapeHtml(priceInfo.iapRange) + '</div>' : '',
         note ? '<div class="app-card-note"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-right:4px;">sticky_note_2</span>' + escapeHtml(note) + '</div>' : '',
         '<div class="app-card-actions">',
           '<button class="btn btn-icon" onclick="openEditModal(\'' + escapeHtml(app.id) + '\',\'' + escapeHtml(app.name) + '\',\'' + escapeHtml(app.country || 'us') + '\',' + threshold + ',\'' + escapeHtml(note) + '\',' + isChangeMode + ')"><span class="material-symbols-rounded">edit</span></button>',

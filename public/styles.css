@@ -405,6 +405,15 @@ body {
   color: var(--body);
 }
 
+.app-card-iap {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--canvas);
+  font-size: 11px;
+  color: var(--positive-deep);
+  font-weight: 600;
+}
+
 .app-card-actions {
   display: flex;
   gap: var(--space-xs);

@@ -258,6 +258,7 @@ async function fetchAppPrice(playApi, appId, country, lang) {
       currency: data.currency || "USD",
       free: data.free,
       offersIAP: data.offersIAP || data.inAppPurchases || false,
+      IAPRange: data.IAPRange || '',
       title: data.title,
       icon: data.icon,
       developer: data.developer,
@@ -323,6 +324,7 @@ async function checkApp(app, playApi, env, sc3Url) {
   status.last_checked_at = new Date().toISOString();
   status.last_checked_free = free;
   status.offersIAP = priceInfo.offersIAP;
+  status.IAPRange = priceInfo.IAPRange;
   status.containsAds = priceInfo.containsAds;
   status.icon = icon || status.icon;
   status.score = score || status.score;

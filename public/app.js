@@ -153,7 +153,6 @@ function renderApps(apps) {
           '<span class="material-symbols-rounded iap-arrow">expand_more</span>' +
         '</div>' +
         '<div class="iap-detail">' +
-          '<div class="iap-info">最低内购价: <strong>' + escapeHtml(st.IAPRange) + '</strong></div>' +
           '<div class="iap-monitor">' +
             '<label class="toggle">' +
               '<input type="checkbox" class="toggle-input" ' + (monitorIAP ? 'checked' : '') + ' onchange="setIAPMonitor(\'' + escapeHtml(app.id) + '\',this.checked,\'' + escapeHtml(app.name) + '\')">' +

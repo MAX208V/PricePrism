@@ -359,7 +359,13 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   font-size: 12px;
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Toast */
+
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--body); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; z-index: 200; white-space: nowrap; opacity: 0; transition: opacity .3s; pointer-events: none; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
 .toast.visible { opacity: 1; }
 

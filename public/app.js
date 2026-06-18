@@ -28,6 +28,7 @@ function formatTime(iso) {
 
 function getPriceDisplay(r) {
   if (!r) return { text: '-', isFree: false, iapText: '' };
+  if (r.price === null || r.price === undefined) return { text: '待检查', isFree: false, offersIAP: false, containsAds: false, iapRange: '', iapText: '' };
   const isFree = r.free === true || r.price === 0 || r.price === '0';
   const ads = r.containsAds === true;
   const iap = r.offersIAP === true;
@@ -441,12 +442,21 @@ function toggleCountryPicker(id) {
 
 // ---- 立即检查 ----
 async function checkPrices() {
+  const btn = document.querySelector('.card-badge-refresh .material-symbols-rounded');
+  if (btn) btn.style.animation = 'spin .6s linear infinite';
   try {
-    await fetch('/api/check', { method: 'POST' });
-    showToast('检查完成');
-    setTimeout(() => location.reload(), 1000);
+    const res = await fetch('/api/check');
+    const data = await res.json();
+    if (!data.ok) {
+      showToast('检查失败: ' + (data.error || JSON.stringify(data.errors || data)));
+      return;
+    }
+    showToast('检查完成 (' + (data.results?.filter(r=>r.ok).length || 0) + '/' + (data.results?.length || 0) + ')');
+    await loadApps();
   } catch (e) {
-    showToast('检查失败: ' + e.message);
+    showToast('请求失败: ' + e.message);
+  } finally {
+    if (btn) btn.style.animation = '';
   }
 }
 

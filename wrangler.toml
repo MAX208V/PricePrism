@@ -13,7 +13,7 @@ id = "8b89d8b5c511457390f5aee4cce00570"
 [[d1_databases]]
 binding = "DB"
 database_name = "priceprism-db"
-database_id = ""
+database_id = "08dab003-cdff-4043-805d-4be32758c96e"
 
 # R2 存储桶（应用图标缓存）
 [[r2_buckets]]

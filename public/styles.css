@@ -536,6 +536,13 @@ body {
   white-space: nowrap;
 }
 
+.search-item-iap {
+  font-size: 10px;
+  color: var(--positive-deep);
+  font-weight: 600;
+  margin-top: 1px;
+}
+
 .search-item-price {
   font-size: 14px;
   font-weight: 600;

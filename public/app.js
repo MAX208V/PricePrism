@@ -170,6 +170,7 @@ async function doSearch() {
         '<div class="search-item-info">' +
           '<div class="search-item-title">' + escapeHtml(r.title) + '</div>' +
           '<div class="search-item-meta">' + escapeHtml(r.appId) + ' · ' + escapeHtml(typeof r.developer === 'object' ? (r.developer.devId || r.developer.name || '') : (r.developer || '')) + '</div>' +
+          (r.IAPRange ? '<div class="search-item-iap">内购: ' + escapeHtml(r.IAPRange) + '</div>' : '') +
         '</div>' +
         '<div class="search-item-price">' + pi.text + '</div>' +
       '</div>';

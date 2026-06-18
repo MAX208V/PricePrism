@@ -202,7 +202,8 @@ async function handleSearch(request, env) {
       free: app.free,
       currency: app.currency,
       containsAds: app.containsAds,
-      offersIAP: app.offersIAP || app.inAppPurchases
+      offersIAP: app.offersIAP || app.inAppPurchases,
+      IAPRange: app.IAPRange || ''
     }));
     
     return jsonResponse({ ok: true, results });

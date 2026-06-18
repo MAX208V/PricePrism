@@ -103,7 +103,7 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 
 /* App Cards */
 .app-card { padding: 0 0 var(--space-sm); }
-.app-card + .app-card { border-top: 1px solid var(--mute); padding-top: var(--space-sm); margin-top: var(--space-sm); opacity: .3; }
+.app-card + .app-card { border-top: 1.5px solid #d0d4cc; padding-top: var(--space-sm); margin-top: var(--space-sm); }
 
 .app-card-main { display: flex; gap: var(--space-sm); align-items: flex-start; }
 .app-card-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: var(--canvas-soft); }

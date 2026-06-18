@@ -33,11 +33,18 @@ function formatTime(iso) {
 function getPriceDisplay(r) {
   if (!r) return { text: '-', isFree: false };
   const isFree = r.free === true || r.price === 0 || r.price === '0';
-  if (isFree) return { text: '免费', isFree: true };
-  if (r.price !== undefined && r.price !== null && r.price !== 0) {
-    return { text: '$' + parseFloat(r.price).toFixed(2), isFree: false };
+  const ads = r.containsAds === true;
+  const iap = r.offersIAP === true;
+  let text;
+  if (isFree) {
+    text = '免费';
+    if (ads && iap) text += '·内购+广告';
+    else if (ads) text += '·含广告';
+    else if (iap) text += '·含内购';
+  } else {
+    text = '$' + parseFloat(r.price).toFixed(2);
   }
-  return { text: '-', isFree: false };
+  return { text, isFree, offersIAP: iap, containsAds: ads };
 }
 
 // ==================== Escape HTML ====================
@@ -77,7 +84,7 @@ function renderApps(apps) {
     const st = app.status || {};
     const price = st.last_checked_price;
     const isFree = st.last_checked_free;
-    const priceInfo = getPriceDisplay({ free: isFree, price });
+    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: st.offersIAP, containsAds: st.containsAds });
     const threshold = app.threshold;
     const isBelow = !isFree && !app.monitor_mode && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
@@ -96,6 +103,7 @@ function renderApps(apps) {
               score ? '<span>★ ' + escapeHtml(score) + '</span>' : '',
               isBelow ? '<span class="badge badge--success">低于阈值</span>' : '',
               isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '',
+              st.offersIAP ? '<span class="badge badge--success">含内购</span>' : '',
             '</div>',
           '</div>',
           '<div class="app-card-right">',

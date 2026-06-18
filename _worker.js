@@ -257,14 +257,14 @@ async function fetchAppPrice(playApi, appId, country, lang) {
       price: data.price || 0,
       currency: data.currency || "USD",
       free: data.free,
+      offersIAP: data.offersIAP || data.inAppPurchases || false,
       title: data.title,
       icon: data.icon,
       developer: data.developer,
       score: data.score,
       scoreText: data.scoreText,
       installs: data.installs,
-      containsAds: data.containsAds,
-      offersIAP: data.offersIAP || data.inAppPurchases
+      containsAds: data.containsAds
     };
   } catch (e) {
     return { ok: false, error: e.message };
@@ -322,6 +322,8 @@ async function checkApp(app, playApi, env, sc3Url) {
   status.last_checked_price = price;
   status.last_checked_at = new Date().toISOString();
   status.last_checked_free = free;
+  status.offersIAP = priceInfo.offersIAP;
+  status.containsAds = priceInfo.containsAds;
   status.icon = icon || status.icon;
   status.score = score || status.score;
   status.scoreText = scoreText || status.scoreText;

@@ -238,17 +238,6 @@ export async function handleAppEvents(request, env) {
         });
       }
     }
-    // 最新状态作为第一个事件
-    if (records.length > 0) {
-      const latest = records[0];
-      events.unshift({
-        type: latest.free ? '免费' : '当前价格',
-        old_price: '',
-        new_price: latest.priceText || '$' + latest.price,
-        time: latest.recorded_at,
-        current: true
-      });
-    }
     return jsonResponse({ ok: true, app_id: appId, events });
   } catch (e) { return jsonResponse({ error: e.message }, 500); }
 }

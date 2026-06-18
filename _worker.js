@@ -102,6 +102,18 @@ async function handleDashboard(env) {
   for (const app of apps) {
     const st = await KV.get("status:" + app.id, "json") || {};
     const parsedApp = { ...app, countries: JSON.stringify(parseCountries(app)) };
+    // 优先 R2 缓存图标，其次 KV 旧缓存，最后 URL
+    if (env.ICONS) {
+      try {
+        const obj = await env.ICONS.get("icons/" + app.id);
+        if (obj) {
+          const buf = await obj.arrayBuffer();
+          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          st.icon_data = "data:" + (obj.httpMetadata?.contentType || "image/png") + ";base64," + b64;
+        }
+      } catch (_) {}
+    }
+    if (!st.icon_data) st.icon_data = await KV.get("icon_data:" + app.id) || st.icon || "";
     list.push({ ...parsedApp, status: st });
   }
 

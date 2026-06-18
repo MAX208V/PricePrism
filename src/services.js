@@ -1,5 +1,5 @@
 // ==================== 核心业务逻辑 ====================
-import { DEFAULT_COUNTRY, parseIAPRange, parseDeveloper } from './utils.js';
+import { DEFAULT_COUNTRY, parseDeveloper } from './utils.js';
 import { fetchAppPrice, cacheIcon } from './storage.js';
 
 // ── 全量监控入口（Cron & /api/check）──
@@ -24,7 +24,7 @@ export async function monitorAndNotify(env) {
 // ── 单应用检查 ──
 export async function checkApp(app, env) {
   const { PLAY_API, SC3_URL, DB, ICONS } = env;
-  const { id, name, country, lang, threshold, monitor_mode, note, monitor_iap, iap_threshold, countries } = app;
+  const { id, name, country, lang, threshold, monitor_mode, note, countries } = app;
 
   const checkCountries = [...new Set([country, ...(JSON.parse(countries || '["' + country + '"]'))])].filter(Boolean);
   const priceResults = {};
@@ -67,9 +67,9 @@ export async function checkApp(app, env) {
     }
   }
 
-  let notified = false, reason = null, iapNotified = false, iapReason = null;
+  let notified = false, reason = null;
 
-  // 主价格监控
+  // 价格监控
   if (monitor_mode !== "change" && !free && price > 0) {
     let effectiveThreshold = threshold;
     // 百分比阈值: threshold_pct% off from base_price
@@ -83,17 +83,6 @@ export async function checkApp(app, env) {
   } else if (monitor_mode === "change") {
     const bp = app.base_price;
     if (bp !== null && price !== bp) { notified = true; reason = "price_changed"; }
-  }
-
-  // IAP 监控
-  const iapInfo = parseIAPRange(mainPriceInfo.IAPRange);
-  if (iapInfo && (monitor_iap || iap_threshold)) {
-    const iapThresh = iap_threshold || 0;
-    if (iapThresh > 0 && iapInfo.min < iapThresh) {
-      const lastIapMin = app.last_iap_notified_price;
-      if (lastIapMin === undefined || lastIapMin === null) { iapNotified = true; iapReason = "first_drop"; }
-      else if (iapInfo.min < lastIapMin) { iapNotified = true; iapReason = "dropped"; }
-    }
   }
 
   // 发送通知
@@ -112,18 +101,6 @@ export async function checkApp(app, env) {
     await DB.prepare("INSERT INTO notifications (app_id, name, price, threshold, type, notified, time) VALUES (?,?,?,?,?,?,?)").bind(id, name, price, threshold, 'price', 1, now).run();
   }
 
-  if (iapNotified) {
-    const title = `${name} 内购降价啦！`;
-    let desp = `**最低内购价: ${iapInfo.currencySymbol}${iapInfo.min}**\n\n`;
-    desp += `内购价格区间: ${iapInfo.text}\n\n`;
-    if (iap_threshold) desp += `已低于内购阈值 $${iap_threshold}\n\n`;
-    desp += `- 应用ID: \`${id}\`\n`;
-    desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;
-    await sendSc3(SC3_URL, title, desp);
-    await DB.prepare("UPDATE apps SET last_iap_notified_price=?, last_iap_notified_at=? WHERE id=?").bind(iapInfo.min, now, id).run();
-    await DB.prepare("INSERT INTO notifications (app_id, name, price, threshold, type, notified, time) VALUES (?,?,?,?,?,?,?)").bind(id, name + ' (内购)', iapInfo.min, iap_threshold, 'iap', 1, now).run();
-  }
-
   // 更新 D1 apps 表最新状态
   const updates = [];
   const vals = [];
@@ -137,8 +114,6 @@ export async function checkApp(app, env) {
   if (scoreText) set("last_score_text", scoreText);
   if (installs) set("last_installs", installs);
   set("last_developer", parseDeveloper(developer));
-  set("last_offers_iap", mainPriceInfo.offersIAP ? 1 : 0);
-  set("last_iap_range", mainPriceInfo.IAPRange || "");
   set("last_contains_ads", mainPriceInfo.containsAds ? 1 : 0);
   set("last_prices_by_country", JSON.stringify(pricesByCountry));
   set("last_checked_at", now);
@@ -153,8 +128,8 @@ export async function checkApp(app, env) {
 
   return {
     app_id: id, name, ok: true, price, currency: cur, free, threshold,
-    notified: notified || iapNotified, reason,
-    iap: iapInfo, iapNotified, prices_by_country: pricesByCountry,
+    notified, reason,
+    prices_by_country: pricesByCountry,
     icon, score, scoreText, installs
   };
 }

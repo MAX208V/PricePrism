@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS apps (
   lang TEXT DEFAULT 'en',
   note TEXT DEFAULT '',
   monitor_mode TEXT DEFAULT 'threshold',
-  monitor_iap INTEGER DEFAULT 0,
-  iap_threshold REAL,
+
   created_at TEXT,
   updated_at TEXT,
   base_price REAL,

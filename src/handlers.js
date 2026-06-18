@@ -1,6 +1,5 @@
 // ==================== API 处理器 ====================
 import {
-  jsonResponse, parseCountries, parseIAPRange, COUNTRY_NAMES,
   DEFAULT_COUNTRY, DEFAULT_LANG, DEFAULT_THRESHOLD, HISTORY_MAX
 } from './utils.js';
 import { fetchAppInfo, fetchAppPrice, cacheIcon, getCachedIcon, getApps, getNotifications, getPriceHistory } from './storage.js';
@@ -75,9 +74,8 @@ export async function handleAppsApi(request, env) {
 
     await DB.prepare(
       `INSERT INTO apps
-       (id,name,threshold,country,countries,lang,note,monitor_mode,threshold_type,threshold_pct,monitor_iap,iap_threshold,
-        created_at,updated_at,last_icon,last_price,last_free,last_currency,base_price,base_currency,last_notified_price)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+       (id,name,threshold,country,countries,lang,note,monitor_mode,threshold_type,threshold_pct,created_at,updated_at,last_icon,last_price,last_free,last_currency,base_price,base_currency,last_notified_price)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       body.app_id, name || body.app_id,
       body.threshold ?? DEFAULT_THRESHOLD,
@@ -88,8 +86,7 @@ export async function handleAppsApi(request, env) {
       body.monitor_mode || "threshold",
       body.threshold_type || "amount",
       body.threshold_pct || null,
-      body.monitor_iap ? 1 : 0,
-      body.iap_threshold || null,
+
       now, now,
       preIcon, prePrice, preFree, preCurrency, prePrice, preCurrency, prePrice
     ).run();
@@ -114,7 +111,7 @@ export async function handleAppsApi(request, env) {
     const values = [];
     for (const [k, v] of Object.entries(body)) {
       if (k === "app_id" || k === "id" || k === "countries") continue;
-      if (k === "monitor_iap") { fields.push("monitor_iap=?"); values.push(v ? 1 : 0); continue; }
+
       fields.push(k + "=?");
       values.push(v);
     }
@@ -216,6 +213,45 @@ export async function handleTrend(request, env) {
   });
 }
 
+// ── 应用最近动态(price_history事件) ──
+export async function handleAppEvents(request, env) {
+  const url = new URL(request.url);
+  const appId = url.searchParams.get("appId");
+  if (!appId) return jsonResponse({ error: "appId required" }, 400);
+  try {
+    // 取最近10条价格记录，检测变化
+    const r = await env.DB.prepare(
+      "SELECT price, free, currency, price_text, recorded_at FROM price_history WHERE app_id=? ORDER BY recorded_at DESC LIMIT 10"
+    ).bind(appId).all();
+    const records = r.results || [];
+    const events = [];
+    for (let i = 0; i < records.length - 1; i++) {
+      const cur = records[i];
+      const prev = records[i + 1];
+      if (cur.price !== prev.price || cur.free !== prev.free) {
+        events.push({
+          type: cur.free ? '变为免费' : (cur.price < prev.price ? '降价' : '涨价'),
+          old_price: prev.priceText || '$' + prev.price,
+          new_price: cur.priceText || '$' + cur.price,
+          time: cur.recorded_at
+        });
+      }
+    }
+    // 最新状态作为第一个事件
+    if (records.length > 0) {
+      const latest = records[0];
+      events.unshift({
+        type: latest.free ? '免费' : '当前价格',
+        old_price: '',
+        new_price: latest.priceText || '$' + latest.price,
+        time: latest.recorded_at,
+        current: true
+      });
+    }
+    return jsonResponse({ ok: true, app_id: appId, events });
+  } catch (e) { return jsonResponse({ error: e.message }, 500); }
+}
+
 // ── 手动触发检查 ──
 export async function handleCheck(env) {
   const result = await monitorAndNotify(env);
@@ -236,14 +272,14 @@ export async function handleMigrate(env) {
         const st = await KV.get("status:" + app.id, "json") || {};
         await DB.prepare(
           `INSERT OR REPLACE INTO apps
-           (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,
+           (id,name,threshold,country,countries,lang,note,monitor_mode,
             created_at,updated_at,
             last_price,last_free,last_currency,last_price_text,last_icon,last_score,last_score_text,
-            last_installs,last_developer,last_offers_iap,last_iap_range,last_contains_ads,
+            last_installs,last_developer,last_contains_ads,
             last_prices_by_country,last_notified_price,last_notified_at,
-            last_iap_notified_price,last_iap_notified_at,last_checked_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,
-             ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+            last_checked_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,
+             ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         ).bind(
           app.id, app.name || app.id,
           app.threshold ?? 6,
@@ -252,8 +288,7 @@ export async function handleMigrate(env) {
           app.lang || "en",
           app.note || "",
           app.monitor_mode || "threshold",
-          app.monitor_iap ? 1 : 0,
-          app.iap_threshold || null,
+
           app.created_at || now, now,
           st.last_checked_price ?? null,
           st.last_checked_free ?? 0, "USD", null,
@@ -261,10 +296,9 @@ export async function handleMigrate(env) {
           st.score ?? null, st.scoreText || "",
           st.installs || "",
           typeof st.developer === 'object' ? JSON.stringify(st.developer) : (st.developer || ""),
-          st.offersIAP ? 1 : 0, st.IAPRange || "", st.containsAds ? 1 : 0,
+          st.containsAds ? 1 : 0,
           JSON.stringify(st.prices_by_country || {}),
           st.last_notified_price ?? null, st.last_notified_at || null,
-          st.last_iap_notified_price ?? null, st.last_iap_notified_at || null,
           st.last_checked_at || null
         ).run();
         result.apps++;

@@ -2,7 +2,7 @@
 import {
   handleDashboard, handleAppsApi, handleCheck, handleHistory,
   handleSearch, handleAppDetail, handleCountries, handleBg,
-  handleTrend, handleMigrate
+  handleTrend, handleMigrate, handleAppEvents
 } from './handlers.js';
 import { monitorAndNotify } from './services.js';
 import { jsonResponse } from './utils.js';
@@ -33,6 +33,7 @@ export default {
       if (path === "/api/countries") return await handleCountries();
       if (path === "/api/bg") return await handleBg();
       if (path === "/api/trend") return await handleTrend(request, env);
+      if (path === "/api/app-events") return await handleAppEvents(request, env);
       if (path === "/api/migrate") return await handleMigrate(env);
       if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 

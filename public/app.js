@@ -87,7 +87,7 @@ function renderApps(apps) {
     const st = app;
     const price = app.last_price;
     const isFree = app.last_free;
-    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: app.last_offers_iap, containsAds: app.last_contains_ads, IAPRange: app.last_iap_range || "" });
+    const priceInfo = getPriceDisplay({ free: isFree, price, containsAds: app.last_contains_ads });
     const threshold = app.threshold;
     const thresholdType = app.threshold_type || 'amount';
     const thresholdPct = app.threshold_pct || 20;
@@ -96,9 +96,7 @@ function renderApps(apps) {
     const icon = app.icon_data || app.last_icon || '';
     const score = app.last_score_text || '';
     const note = app.note || '';
-    const hasIAP = !!app.last_iap_range;
-    const monitorIAP = app.monitor_iap || false;
-    const iapThreshold = app.iap_threshold || '';
+    
     const appCountries = (() => {
     try { return typeof app.countries === 'string' ? JSON.parse(app.countries) : (app.countries || [app.country || 'us']); }
     catch(e) { return [app.country || 'us']; }
@@ -120,7 +118,7 @@ function renderApps(apps) {
             (isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '') +
             (app.base_price !== null && price !== undefined && price !== null && !isFree ? '<span class="badge ' + (price < app.base_price ? 'badge--success' : 'badge--info') + '">' +
               (price < app.base_price ? '▼' : price > app.base_price ? '▲' : '') + '$' + Math.abs(price - app.base_price).toFixed(2) + '</span>' : '') +
-            (app.last_offers_iap ? '<span class="badge badge--success">含内购</span>' : '') +
+            
             (appCountries.length > 1 ? '<span class="badge badge--primary">' + appCountries.length + '区域</span>' : '') +
           '</div>' +
         '</div>' +
@@ -168,26 +166,20 @@ function renderApps(apps) {
         '</div>' +
       '</div>' : '') +
 
-      // 内购价格
-      (hasIAP ? '<div class="app-card-iap" onclick="toggleIAP(this)">' +
-        '<div class="iap-expand-toggle">' +
+      // 最近动态
+      '<div class="app-card-event" onclick="toggleEvents(this,\'' + escapeHtml(app.id) + '\')">' +
+        '<div class="event-toggle">' +
           '<span class="material-symbols-rounded">payments</span>' +
-          '<span class="iap-range-text">' + escapeHtml(app.last_iap_range || '') + '</span>' +
-          '<span class="material-symbols-rounded iap-arrow">expand_more</span>' +
+          '<span class="event-label">最近动态</span>' +
+          '<span class="event-badge mute" id="event-badge-' + escapeHtml(app.id) + '">加载中</span>' +
+          '<span class="material-symbols-rounded event-arrow">expand_more</span>' +
         '</div>' +
-        '<div class="iap-detail">' +
-          '<div class="iap-monitor">' +
-            '<label class="toggle">' +
-              '<input type="checkbox" class="toggle-input" ' + (monitorIAP ? 'checked' : '') + ' onchange="setIAPMonitor(\'' + escapeHtml(app.id) + '\',this.checked,\'' + escapeHtml(app.name) + '\')">' +
-              '<span class="toggle-slider"></span><span class="toggle-label">监控内购最低价</span>' +
-            '</label>' +
-            '<div class="iap-threshold-row" style="' + (monitorIAP ? '' : 'display:none') + '">' +
-              '<input type="number" class="input" style="height:32px;font-size:12px;width:90px;" placeholder="阈值$" value="' + escapeHtml(iapThreshold) + '" onchange="setIAPThreshold(\'' + escapeHtml(app.id) + '\',this.value)">' +
-              '<span style="font-size:11px;color:var(--mute);margin-left:4px;">低于此价时通知</span>' +
-            '</div>' +
+        '<div class="event-detail" id="event-detail-' + escapeHtml(app.id) + '">' +
+          '<div class="event-list" id="event-list-' + escapeHtml(app.id) + '">' +
+            '<div class="loading" style="padding:8px;">加载中...</div>' +
           '</div>' +
         '</div>' +
-      '</div>' : '') +
+      '</div>' +
 
       (note ? '<div class="app-card-note"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-right:4px;">sticky_note_2</span>' + escapeHtml(note) + '</div>' : '') +
 

@@ -33,7 +33,6 @@ export function parseCountries(app) {
   return [app.country || "us"];
 }
 
-export function parseIAPRange(rangeStr) {
   if (!rangeStr) return null;
   const clean = rangeStr.replace(/\s*per\s*item\s*$/i, '').trim();
   const parts = clean.split('-').map(s => s.trim());

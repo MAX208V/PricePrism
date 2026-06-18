@@ -15,6 +15,11 @@ export default {
   },
 
   async fetch(request, env) {
+    // CORS 预检
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" } });
+    }
+
     const url = new URL(request.url);
     const path = url.pathname;
 

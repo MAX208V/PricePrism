@@ -58,22 +58,25 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  color: var(--mute);
-  border: none;
-  border-radius: 99px;
-  padding: 2px 6px;
-  cursor: pointer;
-  font-size: 11px;
-  transition: all .15s;
-  line-height: 1;
-}
-.card-refresh .material-symbols-rounded {
-  font-size: 14px;
-}
-.card-refresh:hover {
   background: var(--primary-pale);
   color: var(--positive-deep);
+  border: none;
+  border-radius: 99px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all .15s;
+  line-height: 1;
+  min-width: 26px;
+  height: 20px;
+}
+.card-refresh .material-symbols-rounded {
+  font-size: 13px;
+}
+.card-refresh:hover {
+  background: var(--primary-deep);
+  color: #fff;
 }
 .card--search { position: sticky; top: var(--space-md); z-index: 10; }
 .card--list { }

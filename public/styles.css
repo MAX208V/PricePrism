@@ -66,17 +66,15 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   cursor: pointer;
   font-size: 11px;
   font-weight: 600;
+  font-family: inherit;
   transition: all .15s;
-  line-height: 1;
-  min-width: 26px;
-  height: 20px;
+  line-height: 1.4;
+  appearance: none;
+  -webkit-appearance: none;
 }
 .card-refresh .material-symbols-rounded {
-  font-size: 13px;
-}
-.card-refresh:hover {
-  background: var(--primary-deep);
-  color: #fff;
+  font-size: 12px;
+  line-height: 1;
 }
 .card--search { position: sticky; top: var(--space-md); z-index: 10; }
 .card--list { }

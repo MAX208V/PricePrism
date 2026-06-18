@@ -1,214 +1,117 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PricePrism - Play App 价格监控</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="page">
-    <!-- Hero -->
-    <header class="hero-band">
-      <div class="hero-content">
-        <span class="logo-badge">
-          <span class="material-symbols-rounded">diamond</span>
-          PricePrism
-        </span>
-        <h1 class="hero-title">Google Play 价格监控</h1>
-        <p class="hero-subtitle">实时追踪应用价格，折扣第一时间通知</p>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>PricePrism</title><link rel="stylesheet" href="/styles.css"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet"></head><body>
+
+  <svg viewBox="0 0 100 100" class="bg-grid" preserveAspectRatio="none"><pattern id="grid" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="var(--mute)" opacity=".15"/></pattern><rect width="100%" height="100%" fill="url(#grid)"/></svg>
+
+<main class="layout">
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-content">
+      <div class="hero-logo"><span class="material-symbols-rounded" style="font-size:36px;color:var(--primary);">monitoring</span><span class="hero-brand">PricePrism</span></div>
+      <p class="hero-sub">Google Play 应用价格监控仪表盘</p>
+    </div>
+  </header>
+
+  <!-- 搜索卡片 -->
+  <section class="card card--search">
+    <div class="card-header">
+      <span class="card-logo"><span class="material-symbols-rounded">search</span></span>
+      <span class="card-title">搜索应用</span>
+    </div>
+    <div class="search-bar">
+      <input type="text" class="input search-input" id="searchInput" placeholder="输入应用名称或包名…">
+      <button class="btn btn--primary" onclick="doSearch()"><span class="material-symbols-rounded">search</span></button>
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </section>
+
+  <!-- 添加监控卡片 -->
+  <section class="card">
+    <div class="card-header">
+      <span class="card-logo"><span class="material-symbols-rounded">add_circle</span></span>
+      <span class="card-title">添加监控</span>
+    </div>
+    <form class="add-form" onsubmit="handleAddApp(event)">
+      <div class="form-field"><label class="label">包名 *</label><input type="text" class="input" name="app_id" required placeholder="com.example.app"></div>
+      <div class="form-field"><label class="label">显示名称</label><input type="text" class="input" name="name" placeholder="留空自动获取"></div>
+      <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" name="threshold" step="0.01" min="0.01" value="6" required></div>
+      <div class="form-field"><label class="label">备注</label><input type="text" class="input" name="note" placeholder="可选"></div>
+      <div class="form-field"><label class="label">监控区域 <button type="button" class="btn btn--ghost btn--sm" onclick="toggleCountryPicker('addCountries')" style="font-size:11px;">选择区域</button></label>
+        <div id="addCountries" class="country-grid" style="display:none;"></div>
       </div>
-    </header>
+      <label class="toggle"><input type="checkbox" class="toggle-input" name="monitor_mode"><span class="toggle-slider"></span><span class="toggle-label">价格变动时通知（任意变化）</span></label>
+      <button class="btn btn--primary btn--full" type="submit">添加</button>
+    </form>
+  </section>
 
-    <main class="main-content">
-      <!-- Card 1: Search -->
-      <section class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded card-icon">search</span>
-          <h2 class="card-title">搜索应用</h2>
-        </div>
-        <div class="search-box">
-          <input type="text" class="input" id="searchInput" placeholder="输入应用名称或包名...">
-          <button class="btn btn-primary" onclick="doSearch()">
-            <span class="material-symbols-rounded">search</span>
-          </button>
-        </div>
-        <div id="searchResults" class="search-results"></div>
-      </section>
+  <!-- 监控列表卡片 -->
+  <section class="card card--list">
+    <div class="card-header">
+      <span class="card-logo"><span class="material-symbols-rounded">monitoring</span></span>
+      <span class="card-title">监控列表</span>
+      <span class="card-badge" id="appsCount">0</span>
+    </div>
+    <div class="btn-row"><button class="btn btn--primary btn--sm" onclick="fetch('/api/check',{method:'POST'}).then(()=>{showToast('检查完成');setTimeout(()=>location.reload(),1000)})"><span class="material-symbols-rounded" style="font-size:16px">refresh</span> 立即检查价格</button></div>
+    <div id="appsList"></div>
+  </section>
 
-      <!-- Card 2: Monitored Apps -->
-      <section class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded card-icon">monitoring</span>
-          <h2 class="card-title">监控列表</h2>
-          <span class="card-badge" id="appsCount">0</span>
-        </div>
-        <div id="appsList" class="apps-grid">
-          <div class="empty-state">加载中...</div>
-        </div>
-      </section>
+  <!-- 通知记录卡片 -->
+  <section class="card card--list">
+    <div class="card-header">
+      <span class="card-logo"><span class="material-symbols-rounded">notifications</span></span>
+      <span class="card-title">通知记录</span>
+      <span class="card-badge" id="historyCount">0</span>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </section>
 
-      <!-- Card 3: Add App -->
-      <section class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded card-icon">add_circle</span>
-          <h2 class="card-title">添加应用</h2>
-        </div>
-        <form id="addForm" class="form" onsubmit="handleAddApp(event)">
-          <div class="form-row">
-            <div class="form-field">
-              <label class="label">包名 <span class="label-required">*</span></label>
-              <input type="text" class="input" name="app_id" placeholder="com.example.app" required>
-            </div>
-            <div class="form-field">
-              <label class="label">地区</label>
-              <input type="text" class="input" name="country" value="us">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label class="label">显示名称 <span class="label-optional">(可选)</span></label>
-              <input type="text" class="input" name="name" placeholder="留空自动获取">
-            </div>
-            <div class="form-field">
-              <label class="label">降价阈值 $</label>
-              <input type="number" class="input" name="threshold" step="0.01" value="6.00">
-            </div>
-          </div>
-          <div class="form-field">
-            <label class="label">备注</label>
-            <input type="text" class="input" name="note" placeholder="可填写备注信息">
-          </div>
-          <div class="form-footer">
-            <label class="toggle">
-              <input type="checkbox" class="toggle-input" name="monitor_mode">
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">价格变动时通知</span>
-            </label>
-            <button type="submit" class="btn btn-primary">
-              <span class="material-symbols-rounded">add</span>
-              添加
-            </button>
-          </div>
-        </form>
-      </section>
+</main>
 
-      <!-- Card 4: History -->
-      <section class="card">
-        <div class="card-header">
-          <span class="material-symbols-rounded card-icon">notifications</span>
-          <h2 class="card-title">通知记录</h2>
-          <span class="card-badge" id="historyCount">0</span>
-        </div>
-        <div id="historyList" class="history-list">
-          <div class="empty-state">暂无记录</div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <p>Cloudflare Workers · Wise Design</p>
-    </footer>
-  </div>
-
-  <!-- Edit Modal -->
-  <div id="editOverlay" class="overlay" onclick="if(event.target===this)closeEditModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">编辑应用</h2>
-        <button class="btn btn-icon" onclick="closeEditModal()">
-          <span class="material-symbols-rounded">close</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-field">
-          <label class="label">显示名称</label>
-          <input type="text" class="input" id="editName" required>
-        </div>
-        <div class="form-row">
-          <div class="form-field">
-            <label class="label">降价阈值 $</label>
-            <input type="number" class="input" id="editThreshold" step="0.01" required>
-          </div>
-          <div class="form-field">
-            <label class="label">地区</label>
-            <input type="text" class="input" id="editCountry">
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="label">备注</label>
-          <input type="text" class="input" id="editNote">
-        </div>
-        <label class="toggle">
-          <input type="checkbox" class="toggle-input" id="editMonitorMode">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label">价格变动时通知</span>
-        </label>
-        <div id="editIAPRow" class="form-field" style="padding-top:var(--space-md);border-top:1px solid var(--canvas-soft);">
-          <label class="toggle" style="margin-bottom:var(--space-sm);">
-            <input type="checkbox" class="toggle-input iap-checkbox">
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">监控内购最低价</span>
-          </label>
-          <div style="display:flex;align-items:center;gap:var(--space-sm);">
-            <input type="number" class="input iap-threshold-input" step="0.01" style="height:36px;width:100px;" placeholder="阈值$">
-            <span style="font-size:11px;color:var(--mute);">低于此价时通知</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
-        <button type="button" class="btn btn-primary" onclick="handleEditApp()">保存</button>
-      </div>
+<!-- 详情弹窗 -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">应用详情</span>
+      <button class="btn btn-icon" onclick="closeDetailModal()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div id="detailContent" class="detail-preview"></div>
+    <div id="detailIAP" class="detail-preview-iap" style="display:none;"></div>
+    <div class="modal-body">
+      <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" id="detailThreshold" step="0.01" min="0.01" value="6"></div>
+      <label class="toggle"><input type="checkbox" class="toggle-input" id="detailMonitorMode"><span class="toggle-slider"></span><span class="toggle-label">价格变动时通知</span></label>
+      <div class="form-field"><label class="label">备注</label><input type="text" class="input" id="detailNote" placeholder="可选"></div>
+      <button class="btn btn--primary btn--full" onclick="addFromDetail()">添加到监控列表</button>
     </div>
   </div>
+</div>
 
-  <!-- Detail Modal -->
-  <div id="detailOverlay" class="overlay" onclick="if(event.target===this)closeDetailModal()">
-    <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h2 class="modal-title">添加到监控</h2>
-        <button class="btn btn-icon" onclick="closeDetailModal()">
-          <span class="material-symbols-rounded">close</span>
-        </button>
+<!-- 编辑弹窗 -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">编辑监控</span>
+      <button class="btn btn-icon" onclick="closeEditModal()"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-field"><label class="label">应用名称</label><input type="text" class="input" id="editName"></div>
+      <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" id="editThreshold" step="0.01" min="0.01"></div>
+      <div class="form-field"><label class="label">备注</label><input type="text" class="input" id="editNote"></div>
+      <div class="form-field"><label class="label">监控区域 <button type="button" class="btn btn--ghost btn--sm" onclick="toggleCountryPicker('editCountries')" style="font-size:11px;">选择区域</button></label>
+        <div id="editCountries" class="country-grid" style="display:none;"></div>
       </div>
-      <div class="modal-body">
-        <div id="detailContent" class="detail-preview"></div>
-      <div id="detailIAP" class="detail-preview-iap" style="display:none;"></div>
-        <div class="form-row">
-          <div class="form-field">
-            <label class="label">降价阈值 $</label>
-            <input type="number" class="input" id="detailThreshold" step="0.01" value="6.00">
-          </div>
-          <div class="form-field">
-            <label class="label">地区</label>
-            <input type="text" class="input" id="detailCountry" value="us">
-          </div>
-        </div>
-        <div class="form-field">
-          <label class="label">备注</label>
-          <input type="text" class="input" id="detailNote">
-        </div>
-        <label class="toggle">
-          <input type="checkbox" class="toggle-input" id="detailMonitorMode">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label">价格变动时通知</span>
-        </label>
+      <label class="toggle"><input type="checkbox" class="toggle-input" id="editMonitorMode"><span class="toggle-slider"></span><span class="toggle-label">价格变动时通知</span></label>
+      <div id="editIAPRow" class="form-field" style="padding-top:var(--space-md);border-top:1px solid var(--canvas-soft);">
+        <label class="toggle" style="margin-bottom:var(--space-sm);"><input type="checkbox" class="toggle-input iap-checkbox"><span class="toggle-slider"></span><span class="toggle-label">监控内购最低价</span></label>
+        <div style="display:flex;align-items:center;gap:var(--space-sm);"><input type="number" class="input iap-threshold-input" step="0.01" style="height:36px;width:100px;" placeholder="阈值$"><span style="font-size:11px;color:var(--mute);">低于此价时通知</span></div>
       </div>
-      <button class="btn btn-primary btn-full" onclick="addFromDetail()" style="margin-top:var(--space-lg);">
-        <span class="material-symbols-rounded">add</span>
-        添加监控
-      </button>
+      <button class="btn btn--primary btn--full" onclick="handleEditApp()">保存修改</button>
     </div>
   </div>
+</div>
 
-  <!-- Toast -->
-  <div id="toast" class="toast"></div>
+<!-- Toast -->
+<div id="toast" class="toast"></div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+<script src="/app.js"></script>
+</body></html>

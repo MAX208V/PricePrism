@@ -113,9 +113,20 @@ function renderApps(apps) {
           '</div>' +
         '</div>' +
         '<div class="app-card-right">' +
-          '<div class="app-card-price' + (isBelow ? ' success' : '') + '"><div class="app-card-price-value">' + priceInfo.text + '</div></div>' +
+          '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\'' + escapeHtml(app.id) + '\',this)" style="cursor:pointer;">' +
+            '<div class="app-card-price-value">' + priceInfo.text + '</div>' +
+          '</div>' +
           '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : '阈值 $' + threshold) + '</div>' +
         '</div>' +
+      '</div>' +
+      '<div class="app-card-trend" id="trend-' + escapeHtml(app.id) + '" style="display:none;">' +
+        '<div class="trend-tabs">' +
+          '<span class="trend-tab active" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'week\',this)">周</span>' +
+          '<span class="trend-tab" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'month\',this)">月</span>' +
+          '<span class="trend-tab" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'year\',this)">年</span>' +
+          '<span class="trend-loading" id="trend-load-' + escapeHtml(app.id) + '" style="display:none;margin-left:auto;font-size:10px;color:var(--mute);">加载中...</span>' +
+        '</div>' +
+        '<div class="trend-chart" id="trend-chart-' + escapeHtml(app.id) + '"></div>' +
       '</div>' +
 
       // 区域价格对比（可展开）
@@ -437,7 +448,116 @@ function toggleAddForm() {
   if (arrow) arrow.textContent = isOpen ? 'expand_more' : 'expand_less';
 }
 
+// ---- 价格趋势 ----
+function toggleTrend(appId, el) {
+  const trendEl = document.getElementById('trend-' + appId);
+  if (!trendEl) return;
+  const isOpen = trendEl.style.display === 'block';
+  trendEl.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const tab = trendEl.querySelector('.trend-tab.active');
+    if (tab) tab.click();
+    else loadTrend(appId, 'week', trendEl.querySelector('.trend-tab'));
+  }
+}
+
+async function loadTrend(appId, range, tabEl) {
+  const container = document.getElementById('trend-' + appId);
+  if (!container) return;
+  container.querySelectorAll('.trend-tab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  const loadEl = document.getElementById('trend-load-' + appId);
+  const chartEl = document.getElementById('trend-chart-' + appId);
+  if (!chartEl) return;
+  if (loadEl) loadEl.style.display = '';
+  try {
+    const data = await api('/api/trend?appId=' + encodeURIComponent(appId) + '&range=' + range);
+    if (loadEl) loadEl.style.display = 'none';
+    if (data.data && data.data.length > 0) {
+      chartEl.innerHTML = renderTrendSVG(data.data, range);
+    } else {
+      chartEl.innerHTML = '<div class="trend-empty">暂无数据</div>';
+    }
+  } catch (e) {
+    if (loadEl) loadEl.style.display = 'none';
+    chartEl.innerHTML = '<div class="trend-empty">加载失败</div>';
+  }
+}
+
+function renderTrendSVG(data, range) {
+  if (!data || data.length === 0) return '<div class="trend-empty">暂无数据</div>';
+  const points = data.map(d => ({
+    price: d.free ? 0 : (d.price || 0),
+    free: d.free,
+    text: d.priceText || (d.free ? '免费' : '$' + d.price),
+    time: new Date(d.time)
+  }));
+  const width = 520, height = 160, pad = { top: 16, right: 12, bottom: 28, left: 44 };
+  const chartW = width - pad.left - pad.right;
+  const chartH = height - pad.top - pad.bottom;
+  const paidPoints = points.filter(p => !p.free);
+  if (paidPoints.length === 0) {
+    const y = pad.top + chartH / 2;
+    const labels = points.map((p, i) => {
+      const x = pad.left + (i / (points.length - 1 || 1)) * chartW;
+      return '<text x="' + x.toFixed(0) + '" y="' + (y + 16) + '" text-anchor="middle" font-size="8" fill="#999">' + formatTrendTime(p.time, range) + '</text>';
+    }).join('');
+    return '<svg viewBox="0 0 ' + width + ' ' + height + '" style="width:100%;height:auto;">' +
+      '<text x="' + (width / 2) + '" y="' + y + '" text-anchor="middle" font-size="12" fill="var(--positive-deep)" font-weight="600">始终免费</text>' +
+      labels + '</svg>';
+  }
+  const prices = paidPoints.map(p => p.price);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const range_p = maxPrice - minPrice || 1;
+  const yTicks = 4;
+  const yLabels = [];
+  for (let i = 0; i <= yTicks; i++) {
+    const v = minPrice + (range_p / yTicks) * i;
+    yLabels.push({ y: pad.top + chartH - (i / yTicks) * chartH, label: '$' + v.toFixed(2) });
+  }
+  let svg = '';
+  for (const yl of yLabels) {
+    svg += '<line x1="' + pad.left + '" y1="' + yl.y + '" x2="' + (pad.left + chartW) + '" y2="' + yl.y + '" stroke="#e8ebe6" stroke-width="1"/>';
+  }
+  const maxLabels = range === 'year' ? 12 : (range === 'month' ? 6 : 4);
+  const step = Math.max(1, Math.floor(points.length / maxLabels));
+  for (let i = 0; i < points.length; i += step) {
+    const x = pad.left + (i / (points.length - 1 || 1)) * chartW;
+    svg += '<text x="' + x.toFixed(0) + '" y="' + (height - 4) + '" text-anchor="middle" font-size="8" fill="#999">' + formatTrendTime(points[i].time, range) + '</text>';
+  }
+  for (const yl of yLabels) {
+    svg += '<text x="' + (pad.left - 4) + '" y="' + (yl.y + 3) + '" text-anchor="end" font-size="9" fill="#666">' + yl.label + '</text>';
+  }
+  const linePoints = paidPoints.map((p, i) => {
+    const x = pad.left + (i / (paidPoints.length - 1 || 1)) * chartW;
+    const y = pad.top + chartH - ((p.price - minPrice) / range_p) * chartH;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  svg += '<polyline points="' + linePoints + '" fill="none" stroke="#9fe870" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  const areaPoints = paidPoints.map((p, i) => {
+    const x = pad.left + (i / (paidPoints.length - 1 || 1)) * chartW;
+    const y = pad.top + chartH - ((p.price - minPrice) / range_p) * chartH;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const firstX = pad.left;
+  const lastX = pad.left + chartW;
+  const bottomY = pad.top + chartH;
+  svg += '<polygon points="' + firstX + ',' + bottomY + ' ' + areaPoints + ' ' + lastX + ',' + bottomY + '" fill="url(#g11539)" opacity="0.25"/>';
+  svg = '<defs><linearGradient id="g11539" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9fe870"/><stop offset="100%" stop-color="#9fe870" stop-opacity="0.05"/></linearGradient></defs>' + svg;
+  return '<svg viewBox="0 0 ' + width + ' ' + height + '" style="width:100%;height:auto;">' + svg + '</svg>';
+}
+
+function formatTrendTime(date, range) {
+  const m = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  if (range === 'year') return m + '/' + d;
+  const h = date.getUTCHours();
+  return m + '/' + d + ' ' + h + '时';
+}
+
 // ---- Delete ----
+
 async function deleteApp(id) {
   if (!confirm('确认删除此应用？')) return;
   try {

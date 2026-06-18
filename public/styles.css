@@ -256,6 +256,47 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .detail-preview-price { font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--positive); }
 .detail-preview-iap { margin-bottom: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--primary-pale); border-radius: var(--radius-md); font-size: 12px; color: var(--positive-deep); font-weight: 600; }
 
+
+/* Trend Chart */
+.app-card-trend {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--canvas);
+}
+.trend-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+.trend-tab {
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--mute);
+  background: var(--canvas-soft);
+  transition: all .15s;
+}
+.trend-tab.active {
+  background: var(--primary-pale);
+  color: var(--positive-deep);
+}
+.trend-tab:hover {
+  background: var(--primary-pale);
+  color: var(--positive-deep);
+}
+.trend-chart {
+  min-height: 80px;
+}
+.trend-empty {
+  text-align: center;
+  padding: var(--space-md);
+  color: var(--mute);
+  font-size: 12px;
+}
+
 /* Toast */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--body); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; z-index: 200; white-space: nowrap; opacity: 0; transition: opacity .3s; pointer-events: none; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
 .toast.visible { opacity: 1; }

@@ -72,6 +72,7 @@ async function handleDashboard(env) {
   const list = [];
   for (const app of apps) {
     const st = await env.KV.get("status:" + app.id, "json") || {};
+    st.icon_data = await env.KV.get("icon_data:" + app.id);
     list.push({ ...app, status: st });
   }
   const history = await env.KV.get("history", "json") || [];
@@ -262,6 +263,10 @@ async function handleAppDetail(request, env) {
     });
     if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
     const d = await resp.json();
+    
+    // 缓存图标
+    if (d.icon) await cacheIcon(env, appId, d.icon).catch(() => {});
+    
     return jsonResponse({
       ok: true, title: d.title, icon: d.icon,
       developer: typeof d.developer === 'object' ? (d.developer.devId || d.developer.name || '') : (d.developer || ''),
@@ -276,7 +281,24 @@ async function handleAppDetail(request, env) {
   }
 }
 
-// ==================== 获取应用详情 ====================
+// ==================== 缓存应用图标 ====================
+async function cacheIcon(env, appId, iconUrl) {
+  if (!iconUrl || !appId) return;
+  // 已有缓存则跳过
+  const cached = await env.KV.get("icon_data:" + appId);
+  if (cached) return;
+  
+  try {
+    const resp = await fetch(iconUrl, { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) return;
+    const buf = await resp.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const contentType = resp.headers.get("content-type") || "image/png";
+    await env.KV.put("icon_data:" + appId, "data:" + contentType + ";base64," + base64, { expirationTtl: 86400 * 7 });
+  } catch (e) {
+    // 静默失败，使用 URL 后备
+  }
+}
 async function fetchAppInfo(env, appId, country = DEFAULT_COUNTRY) {
   const playApi = env.PLAY_API;
   if (!playApi) return null;
@@ -357,6 +379,9 @@ async function checkApp(app, playApi, env, sc3Url) {
   
   const statusKey = "status:" + id;
   const status = await env.KV.get(statusKey, "json") || {};
+  
+  // 缓存图标文件
+  if (icon) await cacheIcon(env, id, icon);
   
   status.last_checked_price = price;
   status.last_checked_at = new Date().toISOString();

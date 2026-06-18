@@ -89,7 +89,7 @@ function renderApps(apps) {
     const threshold = app.threshold;
     const isBelow = !isFree && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
-    const icon = st.icon || '';
+    const icon = st.icon_data || st.icon || '';
     const score = st.scoreText || '';
     const note = app.note || '';
     const hasIAP = !!st.IAPRange;

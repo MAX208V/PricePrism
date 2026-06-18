@@ -102,8 +102,9 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .add-arrow { transition: transform .2s; }
 
 /* App Cards */
-.app-card { padding: 0 0 var(--space-sm); }
-.app-card + .app-card { border-top: 1px solid var(--canvas); padding-top: var(--space-sm); margin-top: var(--space-sm); }
+.app-card { padding: 0 0 var(--space-sm); border-bottom: 1px solid var(--canvas); }
+.app-card:last-child { border-bottom: none; }
+.app-card + .app-card { padding-top: var(--space-sm); margin-top: var(--space-sm); }
 
 .app-card-main { display: flex; gap: var(--space-sm); align-items: flex-start; }
 .app-card-icon { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; background: var(--canvas-soft); }

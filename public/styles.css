@@ -52,7 +52,7 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   gap: 2px;
 }
 
-.card-badge, .card-refresh {
+.card-badge, .card-badge-refresh {
   background: var(--primary-pale);
   color: var(--positive-deep);
   padding: 2px 8px;
@@ -64,20 +64,13 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   text-align: center;
 }
 
-.card-refresh {
+.card-badge-refresh {
   cursor: pointer;
-  border: none;
-  font-family: inherit;
-  transition: all .15s;
   user-select: none;
   -webkit-user-select: none;
+  transition: all .15s;
 }
-.card-refresh .material-symbols-rounded {
-  font-size: 11px;
-  line-height: inherit;
-  vertical-align: middle;
-}
-.card-refresh:hover {
+.card-badge-refresh:hover {
   background: var(--primary-deep);
   color: #fff;
 }

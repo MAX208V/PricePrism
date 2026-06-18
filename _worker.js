@@ -476,6 +476,12 @@ async function checkApp(app, env) {
   return { app_id: id, name, ok: true, price, currency: cur, free, threshold, notified: notified || iapNotified, reason, iap: iapInfo, iapNotified, prices_by_country: pricesByCountry, icon, score, scoreText, installs };
 }
 
+// ==================== 手动触发价格检查 ====================
+async function handleCheck(env) {
+  const result = await monitorAndNotify(env);
+  return jsonResponse(result);
+}
+
 async function sendSc3(url, title, desp) {
   await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, desp }) });
 }

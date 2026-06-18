@@ -24,16 +24,16 @@ export default {
     const path = url.pathname;
 
     try {
-      if (path === "/api/dashboard") return handleDashboard(env);
-      if (path === "/api/apps") return handleAppsApi(request, env);
-      if (path === "/api/check") return handleCheck(env);
-      if (path === "/api/history") return handleHistory(env);
-      if (path === "/api/search") return handleSearch(request, env);
-      if (path === "/api/app-detail") return handleAppDetail(request, env);
-      if (path === "/api/countries") return handleCountries();
-      if (path === "/api/bg") return handleBg();
-      if (path === "/api/trend") return handleTrend(request, env);
-      if (path === "/api/migrate") return handleMigrate(env);
+      if (path === "/api/dashboard") return await handleDashboard(env);
+      if (path === "/api/apps") return await handleAppsApi(request, env);
+      if (path === "/api/check") return await handleCheck(env);
+      if (path === "/api/history") return await handleHistory(env);
+      if (path === "/api/search") return await handleSearch(request, env);
+      if (path === "/api/app-detail") return await handleAppDetail(request, env);
+      if (path === "/api/countries") return await handleCountries();
+      if (path === "/api/bg") return await handleBg();
+      if (path === "/api/trend") return await handleTrend(request, env);
+      if (path === "/api/migrate") return await handleMigrate(env);
       if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 
       const response = await env.ASSETS.fetch(request);

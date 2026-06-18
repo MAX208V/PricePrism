@@ -201,7 +201,7 @@ function showDetail(id, title, icon, priceText) {
       if (!d.ok) return;
       const iapEl = document.getElementById('detailIAP');
       if (d.IAPRange && iapEl) {
-        iapEl.textContent = '内购: ' + d.IAPRange;
+        iapEl.textContent = '内购: ' + d.IAPRange.replace(/\s*per\s*item\s*$/i, '');
         iapEl.style.display = 'block';
       }
     })

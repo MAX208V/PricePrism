@@ -204,7 +204,7 @@ async function handleSearch(request, env) {
       currency: app.currency,
       containsAds: app.containsAds,
       offersIAP: app.offersIAP || app.inAppPurchases,
-      IAPRange: app.IAPRange || ''
+      IAPRange: (app.IAPRange || '').replace(/\s*per\s*item\s*$/i, '')
     }));
     
     return jsonResponse({ ok: true, results });
@@ -241,7 +241,7 @@ async function handleAppDetail(request, env) {
       free: d.free,
       currency: d.currency,
       offersIAP: d.offersIAP || d.inAppPurchases || false,
-      IAPRange: d.IAPRange || '',
+      IAPRange: (d.IAPRange || '').replace(/\s*per\s*item\s*$/i, ''),
       containsAds: d.containsAds,
       installs: d.installs
     });
@@ -297,7 +297,7 @@ async function fetchAppPrice(playApi, appId, country, lang) {
       currency: data.currency || "USD",
       free: data.free,
       offersIAP: data.offersIAP || data.inAppPurchases || false,
-      IAPRange: data.IAPRange || '',
+      IAPRange: (data.IAPRange || '').replace(/\s*per\s*item\s*$/i, ''),
       title: data.title,
       icon: data.icon,
       developer: data.developer,

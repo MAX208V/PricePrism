@@ -21,6 +21,7 @@ export default {
     if (path === "/api/history") return handleHistory(env);
     if (path === "/api/status") return handleStatus(env);
     if (path === "/api/search") return handleSearch(request, env);
+    if (path === "/api/app-detail") return handleAppDetail(request, env);
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 
     // 静态资源由 Cloudflare Assets 处理
@@ -207,6 +208,43 @@ async function handleSearch(request, env) {
     }));
     
     return jsonResponse({ ok: true, results });
+  } catch (e) {
+    return jsonResponse({ error: e.message }, 500);
+  }
+}
+
+// ==================== App Detail API ====================
+// GET /api/app-detail?appId=xxx&country=us
+async function handleAppDetail(request, env) {
+  const url = new URL(request.url);
+  const appId = url.searchParams.get("appId");
+  if (!appId) return jsonResponse({ error: "appId required" }, 400);
+  
+  const playApi = env.PLAY_API;
+  if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
+  
+  try {
+    const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${url.searchParams.get('country') || 'us'}`, {
+      headers: { Accept: "application/json" }
+    });
+    if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
+    
+    const d = await resp.json();
+    return jsonResponse({
+      ok: true,
+      title: d.title,
+      icon: d.icon,
+      developer: typeof d.developer === 'object' ? (d.developer.devId || d.developer.name || '') : (d.developer || ''),
+      score: d.score,
+      scoreText: d.scoreText,
+      price: d.price,
+      free: d.free,
+      currency: d.currency,
+      offersIAP: d.offersIAP || d.inAppPurchases || false,
+      IAPRange: d.IAPRange || '',
+      containsAds: d.containsAds,
+      installs: d.installs
+    });
   } catch (e) {
     return jsonResponse({ error: e.message }, 500);
   }

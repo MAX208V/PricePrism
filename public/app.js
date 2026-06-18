@@ -183,13 +183,29 @@ async function doSearch() {
 // ==================== Detail Modal ====================
 function showDetail(id, title, icon, priceText) {
   detailData = { id, title };
-  document.getElementById('detailContent').innerHTML =
+  
+  const content = document.getElementById('detailContent');
+  content.innerHTML =
     (icon ? '<img src="' + escapeHtml(icon) + '" onerror="this.style.display=\'none\'">' : '') +
     '<div style="flex:1;min-width:0;">' +
       '<div class="detail-preview-title">' + escapeHtml(title) + '</div>' +
       '<div class="detail-preview-id">' + escapeHtml(id) + '</div>' +
+      '<div class="detail-preview-price">' + escapeHtml(priceText) + '</div>' +
     '</div>';
   document.getElementById('detailOverlay').classList.add('visible');
+  
+  // 异步获取详情以显示内购价格
+  fetch('/api/app-detail?appId=' + encodeURIComponent(id))
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      const iapEl = document.getElementById('detailIAP');
+      if (d.IAPRange && iapEl) {
+        iapEl.textContent = '内购: ' + d.IAPRange;
+        iapEl.style.display = 'block';
+      }
+    })
+    .catch(() => {});
 }
 
 function closeDetailModal() {

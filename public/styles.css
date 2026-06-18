@@ -637,6 +637,23 @@ body {
   color: var(--mute);
 }
 
+.detail-preview-price {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 4px;
+  color: var(--positive);
+}
+
+.detail-preview-iap {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--primary-pale);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--positive-deep);
+  font-weight: 600;
+}
+
 /* Toast */
 .toast {
   position: fixed;

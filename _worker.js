@@ -158,9 +158,21 @@ async function handleAppsApi(request, env) {
       now, now
     ).run();
 
+    // 预拉应用信息，缓存图标
+    let preIcon = '';
+    try {
+      const info = await fetchAppInfo(env, body.app_id, body.country || 'us');
+      if (info) {
+        if (!name || name.trim() === '') name = info.title || name;
+        preIcon = info.icon || '';
+        if (info.icon && env.ICONS) await cacheIcon(env, body.app_id, info.icon);
+      }
+    } catch(e) {}
+    
     // 初始化 KV 缓存
     const status = await KV.get("status:" + body.app_id, "json") || {};
     status.title = name || status.title;
+    status.icon = preIcon || status.icon;
     status.last_checked_at = null;
     status.last_checked_price = null;
     await KV.put("status:" + body.app_id, JSON.stringify(status));

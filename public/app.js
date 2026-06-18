@@ -82,24 +82,27 @@ function renderApps(apps) {
 
   container.innerHTML = apps.map((app, i) => {
     const sep = i > 0 ? '<div class="app-card-sep"></div>' : '';
-    const st = app.status || {};
-    const price = st.last_checked_price;
-    const isFree = st.last_checked_free;
-    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: st.offersIAP, containsAds: st.containsAds, IAPRange: st.IAPRange });
+    const st = app;
+    const price = app.last_price;
+    const isFree = app.last_free;
+    const priceInfo = getPriceDisplay({ free: isFree, price, offersIAP: app.last_offers_iap, containsAds: app.last_contains_ads, IAPRange: app.last_iap_range || "" });
     const threshold = app.threshold;
     const isBelow = !isFree && price !== undefined && price > 0 && price < threshold;
     const isChangeMode = app.monitor_mode === 'change';
-    const icon = st.icon_data || st.icon || '';
-    const score = st.scoreText || '';
+    const icon = app.icon_data || app.last_icon || '';
+    const score = app.last_score_text || '';
     const note = app.note || '';
-    const hasIAP = !!st.IAPRange;
+    const hasIAP = !!app.last_iap_range;
     const monitorIAP = app.monitor_iap || false;
     const iapThreshold = app.iap_threshold || '';
     const appCountries = (() => {
     try { return typeof app.countries === 'string' ? JSON.parse(app.countries) : (app.countries || [app.country || 'us']); }
     catch(e) { return [app.country || 'us']; }
   })();
-    const pricesByCountry = st.prices_by_country || {};
+    const pricesByCountry = (() => {
+  try { return typeof app.last_prices_by_country === 'string' ? JSON.parse(app.last_prices_by_country) : (app.last_prices_by_country || {}); }
+  catch(e) { return {}; }
+})();
 
     return sep + '<div class="app-card">' +
       '<div class="app-card-main">' +
@@ -111,7 +114,7 @@ function renderApps(apps) {
             (score ? '<span>★ ' + escapeHtml(score) + '</span>' : '') +
             (isBelow ? '<span class="badge badge--success">低于阈值</span>' : '') +
             (isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '') +
-            (st.offersIAP ? '<span class="badge badge--success">含内购</span>' : '') +
+            (app.last_offers_iap ? '<span class="badge badge--success">含内购</span>' : '') +
             (appCountries.length > 1 ? '<span class="badge badge--primary">' + appCountries.length + '区域</span>' : '') +
           '</div>' +
         '</div>' +
@@ -163,7 +166,7 @@ function renderApps(apps) {
       (hasIAP ? '<div class="app-card-iap" onclick="toggleIAP(this)">' +
         '<div class="iap-expand-toggle">' +
           '<span class="material-symbols-rounded">payments</span>' +
-          '<span class="iap-range-text">' + escapeHtml(st.IAPRange) + '</span>' +
+          '<span class="iap-range-text">' + escapeHtml(app.last_iap_range || '') + '</span>' +
           '<span class="material-symbols-rounded iap-arrow">expand_more</span>' +
         '</div>' +
         '<div class="iap-detail">' +

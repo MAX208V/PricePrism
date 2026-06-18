@@ -1,32 +1,51 @@
--- PricePrism D1 数据库 Schema
+-- PricePrism D1 数据库 Schema (v2 — D1全量)
 -- 部署: wrangler d1 execute priceprism-db --file=schema.sql
 
--- 应用配置表
+-- 应用配置表（含最新状态）
 CREATE TABLE IF NOT EXISTS apps (
-  id TEXT PRIMARY KEY,                     -- 包名 (com.example.app)
-  name TEXT NOT NULL DEFAULT '',            -- 显示名称
-  threshold REAL DEFAULT 6,                -- 降价阈值
-  country TEXT DEFAULT 'us',               -- 默认国家
-  countries TEXT DEFAULT '["us"]',         -- 监控区域列表 (JSON数组)
-  lang TEXT DEFAULT 'en',                  -- 语言
-  note TEXT DEFAULT '',                     -- 备注
-  monitor_mode TEXT DEFAULT 'threshold',   -- 监控模式: threshold|change
-  monitor_iap INTEGER DEFAULT 0,           -- 是否监控内购
-  iap_threshold REAL,                      -- 内购阈值
-  created_at TEXT,                          -- 创建时间
-  updated_at TEXT                           -- 更新时间
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  threshold REAL DEFAULT 6,
+  country TEXT DEFAULT 'us',
+  countries TEXT DEFAULT '["us"]',
+  lang TEXT DEFAULT 'en',
+  note TEXT DEFAULT '',
+  monitor_mode TEXT DEFAULT 'threshold',
+  monitor_iap INTEGER DEFAULT 0,
+  iap_threshold REAL,
+  created_at TEXT,
+  updated_at TEXT,
+  -- 最新状态（不再用 KV）
+  last_price REAL,
+  last_free INTEGER DEFAULT 0,
+  last_currency TEXT DEFAULT 'USD',
+  last_price_text TEXT DEFAULT '',
+  last_icon TEXT,
+  last_score REAL,
+  last_score_text TEXT DEFAULT '',
+  last_installs TEXT,
+  last_developer TEXT,
+  last_offers_iap INTEGER DEFAULT 0,
+  last_iap_range TEXT,
+  last_contains_ads INTEGER DEFAULT 0,
+  last_prices_by_country TEXT DEFAULT '{}',
+  last_notified_price REAL,
+  last_notified_at TEXT,
+  last_iap_notified_price REAL,
+  last_iap_notified_at TEXT,
+  last_checked_at TEXT
 );
 
--- 价格走势记录表（每小时一条）
+-- 价格走势记录表
 CREATE TABLE IF NOT EXISTS price_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  app_id TEXT NOT NULL,                    -- 包名
-  country TEXT NOT NULL DEFAULT 'us',      -- 区域
-  price REAL,                              -- 价格
-  free INTEGER DEFAULT 0,                  -- 是否免费
-  currency TEXT DEFAULT 'USD',             -- 货币
-  price_text TEXT DEFAULT '',              -- 显示文本
-  recorded_at TEXT NOT NULL,               -- 记录时间
+  app_id TEXT NOT NULL,
+  country TEXT NOT NULL DEFAULT 'us',
+  price REAL,
+  free INTEGER DEFAULT 0,
+  currency TEXT DEFAULT 'USD',
+  price_text TEXT DEFAULT '',
+  recorded_at TEXT NOT NULL,
   FOREIGN KEY (app_id) REFERENCES apps(id)
 );
 CREATE INDEX IF NOT EXISTS idx_price_app ON price_history(app_id, country, recorded_at);
@@ -35,13 +54,13 @@ CREATE INDEX IF NOT EXISTS idx_price_time ON price_history(recorded_at);
 -- 通知记录表
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  app_id TEXT NOT NULL,                    -- 包名
-  name TEXT DEFAULT '',                     -- 应用名称
-  price REAL,                              -- 触发价格
-  threshold REAL,                          -- 当时阈值
-  type TEXT DEFAULT 'price',               -- 类型: price|iap
-  notified INTEGER DEFAULT 1,              -- 是否已通知
-  time TEXT NOT NULL,                       -- 通知时间
+  app_id TEXT NOT NULL,
+  name TEXT DEFAULT '',
+  price REAL,
+  threshold REAL,
+  type TEXT DEFAULT 'price',
+  notified INTEGER DEFAULT 1,
+  time TEXT NOT NULL,
   FOREIGN KEY (app_id) REFERENCES apps(id)
 );
 CREATE INDEX IF NOT EXISTS idx_notify_app ON notifications(app_id, time);

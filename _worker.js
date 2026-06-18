@@ -45,6 +45,13 @@ export default {
 };
 
 // ==================== 工具函数 ====================
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+  });
+}
+
 function parseCountries(app) {
   if (!app) return ["us"];
   try {
@@ -52,13 +59,6 @@ function parseCountries(app) {
     if (Array.isArray(app.countries)) return app.countries;
   } catch (e) {}
   return [app.country || "us"];
-}
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-  });
 }
 
 function parseIAPRange(rangeStr) {
@@ -92,29 +92,17 @@ async function handleBg() {
 
 // ==================== Dashboard ====================
 async function handleDashboard(env) {
-  const { DB, KV } = env;
+  const { DB, ICONS } = env;
   let apps = [];
-  try { apps = await DB.prepare("SELECT * FROM apps ORDER BY created_at DESC").all(); } catch (e) { apps = { results: [] }; }
-  apps = apps.results || [];
+  try {
+    apps = await DB.prepare("SELECT * FROM apps ORDER BY created_at DESC").all();
+    apps = apps.results || [];
+  } catch (e) { apps = []; }
 
-  // 同时从 KV 获取最新状态作为缓存
-  const list = [];
+  // 给每个 app 加载 R2 缓存图标
   for (const app of apps) {
-    const st = await KV.get("status:" + app.id, "json") || {};
-    const parsedApp = { ...app, countries: JSON.stringify(parseCountries(app)) };
-    // 优先 R2 缓存图标，其次 KV 旧缓存，最后 URL
-    if (env.ICONS) {
-      try {
-        const obj = await env.ICONS.get("icons/" + app.id);
-        if (obj) {
-          const buf = await obj.arrayBuffer();
-          const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-          st.icon_data = "data:" + (obj.httpMetadata?.contentType || "image/png") + ";base64," + b64;
-        }
-      } catch (_) {}
-    }
-    if (!st.icon_data) st.icon_data = await KV.get("icon_data:" + app.id) || st.icon || "";
-    list.push({ ...parsedApp, status: st });
+    app.countries = JSON.stringify(parseCountries(app));
+    app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
   }
 
   let history = [];
@@ -123,40 +111,79 @@ async function handleDashboard(env) {
     history = history.results || [];
   } catch (e) { history = []; }
 
-  return jsonResponse({ apps: list, history, has_sc3: !!env.SC3_URL, has_api: !!env.PLAY_API });
+  return jsonResponse({ apps, history, has_sc3: !!env.SC3_URL, has_api: !!env.PLAY_API });
+}
+
+// ==================== 图标缓存 (R2) ====================
+async function cacheIcon(ICONS, appId, iconUrl) {
+  if (!iconUrl || !appId || !ICONS) return;
+  try {
+    const existing = await ICONS.get("icons/" + appId);
+    if (existing) return;
+    const resp = await fetch(iconUrl, { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) return;
+    const buf = await resp.arrayBuffer();
+    const contentType = resp.headers.get("content-type") || "image/png";
+    await ICONS.put("icons/" + appId, buf, {
+      httpMetadata: { contentType },
+      customMetadata: { source: iconUrl }
+    });
+  } catch (e) {}
+}
+
+// ==================== 获取 R2 缓存图标 ====================
+async function getCachedIcon(ICONS, appId, fallbackUrl) {
+  if (!ICONS) return fallbackUrl || "";
+  try {
+    const obj = await ICONS.get("icons/" + appId);
+    if (obj) {
+      const buf = await obj.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      return "data:" + (obj.httpMetadata?.contentType || "image/png") + ";base64," + b64;
+    }
+    // 尝试读 metadata source URL
+    const head = await ICONS.head("icons/" + appId);
+    if (head?.customMetadata?.source) return head.customMetadata.source;
+  } catch (e) {}
+  return fallbackUrl || "";
 }
 
 // ==================== Apps API (D1) ====================
 async function handleAppsApi(request, env) {
-  const { DB, KV } = env;
+  const { DB, ICONS } = env;
 
   if (request.method === "GET") {
     let apps = [];
-    try { apps = await DB.prepare("SELECT * FROM apps ORDER BY created_at DESC").all(); } catch (e) { apps = { results: [] }; }
-    const result = [];
-    for (const app of apps.results || []) {
-      const st = await KV.get("status:" + app.id, "json") || {};
-      const parsed = { ...app, countries: JSON.stringify(parseCountries(app)) };
-      result.push({ ...parsed, status: st });
+    try { apps = await DB.prepare("SELECT * FROM apps ORDER BY created_at DESC").all(); apps = apps.results || []; } catch (e) { apps = []; }
+    for (const app of apps) {
+      app.countries = JSON.stringify(parseCountries(app));
+      app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
     }
-    return jsonResponse(result);
+    return jsonResponse(apps);
   }
 
   if (request.method === "POST") {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
 
-    let name = body.name;
-    if (!name || name.trim() === "") {
-      const appInfo = await fetchAppInfo(env, body.app_id, body.country || DEFAULT_COUNTRY);
-      if (appInfo) { name = appInfo.title || body.app_id; }
-    }
-
     const countries = body.countries || [body.country || DEFAULT_COUNTRY];
     const now = new Date().toISOString();
 
+    // 预拉应用信息
+    let name = body.name;
+    let preIcon = '';
+    try {
+      const info = await fetchAppInfo(env, body.app_id, countries[0]);
+      if (info) {
+        if (!name || name.trim() === '') name = info.title || name;
+        preIcon = info.icon || '';
+        if (info.icon && ICONS) await cacheIcon(ICONS, body.app_id, info.icon);
+      }
+    } catch (e) {}
+
     await DB.prepare(
-      "INSERT INTO apps (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+      `INSERT INTO apps (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,created_at,updated_at,last_icon)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       body.app_id, name || body.app_id,
       body.threshold ?? DEFAULT_THRESHOLD,
@@ -167,27 +194,8 @@ async function handleAppsApi(request, env) {
       body.monitor_mode || "threshold",
       body.monitor_iap ? 1 : 0,
       body.iap_threshold || null,
-      now, now
+      now, now, preIcon
     ).run();
-
-    // 预拉应用信息，缓存图标
-    let preIcon = '';
-    try {
-      const info = await fetchAppInfo(env, body.app_id, body.country || 'us');
-      if (info) {
-        if (!name || name.trim() === '') name = info.title || name;
-        preIcon = info.icon || '';
-        if (info.icon && env.ICONS) await cacheIcon(env, body.app_id, info.icon);
-      }
-    } catch(e) {}
-    
-    // 初始化 KV 缓存
-    const status = await KV.get("status:" + body.app_id, "json") || {};
-    status.title = name || status.title;
-    status.icon = preIcon || status.icon;
-    status.last_checked_at = null;
-    status.last_checked_price = null;
-    await KV.put("status:" + body.app_id, JSON.stringify(status));
 
     return jsonResponse({ ok: true });
   }
@@ -196,15 +204,12 @@ async function handleAppsApi(request, env) {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
     await DB.prepare("DELETE FROM apps WHERE id = ?").bind(body.app_id).run();
-    await KV.delete("status:" + body.app_id);
-    // 保留 price_history 记录
     return jsonResponse({ ok: true });
   }
 
   if (request.method === "PATCH") {
     const body = await request.json();
     if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
-
     const fields = [];
     const values = [];
     for (const [k, v] of Object.entries(body)) {
@@ -214,14 +219,17 @@ async function handleAppsApi(request, env) {
       values.push(v);
     }
     if (fields.length === 0) return jsonResponse({ error: "no fields" }, 400);
-    if (body.countries && body.countries.length > 0) {
+    if (body.countries && Array.isArray(body.countries)) {
       fields.push("country=?");
       values.push(body.countries[0]);
+      fields.push("countries=?");
+      values.push(JSON.stringify(body.countries));
     }
     fields.push("updated_at=?");
     values.push(new Date().toISOString());
     values.push(body.app_id);
-
+    // 如果有新 name 同步到 last_name
+    if (body.name) { fields.push("name=?"); values.push(body.name); }
     await DB.prepare("UPDATE apps SET " + fields.join(",") + " WHERE id=?").bind(...values).run();
     return jsonResponse({ ok: true });
   }
@@ -229,7 +237,7 @@ async function handleAppsApi(request, env) {
   return jsonResponse({ error: "Method not allowed" }, 405);
 }
 
-// ==================== History（从 D1） ====================
+// ==================== History ====================
 async function handleHistory(env) {
   try {
     const h = await env.DB.prepare("SELECT * FROM notifications ORDER BY time DESC LIMIT ?").bind(HISTORY_MAX).all();
@@ -271,7 +279,6 @@ async function handleAppDetail(request, env) {
     const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${url.searchParams.get('country') || 'us'}`, { headers: { Accept: "application/json" } });
     if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
     const d = await resp.json();
-    if (d.icon) await cacheIcon(env, appId, d.icon).catch(() => {});
     return jsonResponse({
       ok: true, title: d.title, icon: d.icon,
       developer: typeof d.developer === 'object' ? (d.developer.devId || d.developer.name || '') : (d.developer || ''),
@@ -281,42 +288,6 @@ async function handleAppDetail(request, env) {
       containsAds: d.containsAds, installs: d.installs
     });
   } catch (e) { return jsonResponse({ error: e.message }, 500); }
-}
-
-// ==================== 图标缓存 (R2) ====================
-async function cacheIcon(env, appId, iconUrl) {
-  if (!iconUrl || !appId || !env.ICONS) return;
-  try {
-    // 检查 R2 是否已有
-    const existing = await env.ICONS.get("icons/" + appId);
-    if (existing) return;
-
-    const resp = await fetch(iconUrl, { cf: { cacheTtl: 86400 } });
-    if (!resp.ok) return;
-    const buf = await resp.arrayBuffer();
-    const contentType = resp.headers.get("content-type") || "image/png";
-    await env.ICONS.put("icons/" + appId, buf, {
-      httpMetadata: { contentType },
-      customMetadata: { source: iconUrl }
-    });
-  } catch (e) { /* 静默 */ }
-}
-
-// ==================== 获取图标 ====================
-async function getIcon(env, appId, fallbackUrl) {
-  if (env.ICONS) {
-    try {
-      const obj = await env.ICONS.get("icons/" + appId);
-      if (obj) {
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(await obj.arrayBuffer())));
-        return "data:" + (obj.httpMetadata?.contentType || "image/png") + ";base64," + base64;
-      }
-    } catch (e) {}
-  }
-  // KV 旧缓存后备
-  const kvIcon = await env.KV.get("icon_data:" + appId);
-  if (kvIcon) return kvIcon;
-  return fallbackUrl || "";
 }
 
 // ==================== 获取应用详情 ====================
@@ -350,14 +321,13 @@ async function fetchAppPrice(playApi, appId, country, lang) {
 
 // ==================== Monitor & Notify ====================
 async function monitorAndNotify(env) {
-  const { PLAY_API, SC3_URL, DB, KV } = env;
+  const { PLAY_API, SC3_URL, DB, ICONS } = env;
   if (!PLAY_API) return { ok: false, error: "Missing PLAY_API" };
   if (!SC3_URL) return { ok: false, error: "Missing SC3_URL" };
 
   let apps;
   try { apps = await DB.prepare("SELECT * FROM apps").all(); apps = apps.results || []; }
   catch (e) { return { ok: false, error: e.message }; }
-
   if (!apps.length) return { ok: true, message: "No apps configured" };
 
   const results = [];
@@ -370,7 +340,7 @@ async function monitorAndNotify(env) {
 
 // ==================== Check App ====================
 async function checkApp(app, env) {
-  const { PLAY_API, SC3_URL, DB, KV, ICONS } = env;
+  const { PLAY_API, SC3_URL, DB, ICONS } = env;
   const { id, name, country, lang, threshold, monitor_mode, note, monitor_iap, iap_threshold, countries } = app;
 
   const checkCountries = [...new Set([country, ...(JSON.parse(countries || '["' + country + '"]'))])].filter(Boolean);
@@ -404,66 +374,37 @@ async function checkApp(app, env) {
   }
 
   // 缓存图标到 R2
-  if (icon && ICONS) {
-    try {
-      const existing = await ICONS.get("icons/" + id);
-      if (!existing) {
-        const resp = await fetch(icon, { cf: { cacheTtl: 86400 } });
-        if (resp.ok) {
-          const buf = await resp.arrayBuffer();
-          await ICONS.put("icons/" + id, buf, { httpMetadata: { contentType: resp.headers.get("content-type") || "image/png" } });
-        }
-      }
-    } catch (e) {}
-  }
+  if (icon && ICONS) await cacheIcon(ICONS, id, icon);
 
-  // 更新 KV 缓存
-  const statusKey = "status:" + id;
-  const status = await KV.get(statusKey, "json") || {};
-  status.last_checked_price = price;
-  status.last_checked_at = now;
-  status.last_checked_free = free;
-  status.offersIAP = mainPriceInfo.offersIAP;
-  status.IAPRange = mainPriceInfo.IAPRange;
-  status.containsAds = mainPriceInfo.containsAds;
-  status.icon = icon || status.icon;
-  status.score = score || status.score;
-  status.scoreText = scoreText || status.scoreText;
-  status.installs = installs || status.installs;
-  status.developer = developer || status.developer;
-
-  // 记录多区域价格
+  // 多区域价格
   const pricesByCountry = {};
   for (const [cc, pi] of Object.entries(priceResults)) {
     if (pi.ok) {
       pricesByCountry[cc] = { price: pi.price, currency: pi.currency, free: pi.free, priceText: pi.priceText || `$${pi.price}`, checked_at: now };
     }
   }
-  status.prices_by_country = pricesByCountry;
 
   let notified = false, reason = null, iapNotified = false, iapReason = null;
 
   // 主价格监控
   if (monitor_mode !== "change" && !free && price > 0) {
     if (price < threshold) {
-      const last = status.last_notified_price;
+      const last = app.last_notified_price;
       if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
       else if (price < last) { notified = true; reason = "price_dropped"; }
     }
   } else if (monitor_mode === "change") {
-    const lp = status.last_checked_price;
-    const lf = status.last_checked_free;
-    if (lp !== undefined && (price !== lp || free !== lf)) { notified = true; reason = "price_changed"; }
+    const lp = app.last_price;
+    const lf = app.last_free;
+    if (lp !== null && (price !== lp || free !== lf)) { notified = true; reason = "price_changed"; }
   }
 
   // IAP 监控
   const iapInfo = parseIAPRange(mainPriceInfo.IAPRange);
   if (iapInfo && (monitor_iap || iap_threshold)) {
     const iapThresh = iap_threshold || 0;
-    status.iapRangeData = iapInfo;
-    status.last_iap_min_price = iapInfo.min;
     if (iapThresh > 0 && iapInfo.min < iapThresh) {
-      const lastIapMin = status.last_iap_notified_price;
+      const lastIapMin = app.last_iap_notified_price;
       if (lastIapMin === undefined || lastIapMin === null) { iapNotified = true; iapReason = "first_drop"; }
       else if (iapInfo.min < lastIapMin) { iapNotified = true; iapReason = "dropped"; }
     }
@@ -478,8 +419,7 @@ async function checkApp(app, env) {
     if (note) desp += `- 备注: ${note}\n`;
     desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;
     await sendSc3(SC3_URL, title, desp);
-    status.last_notified_price = price;
-    status.last_notified_at = now;
+    await DB.prepare("UPDATE apps SET last_notified_price=?, last_notified_at=? WHERE id=?").bind(price, now, id).run();
     await DB.prepare("INSERT INTO notifications (app_id, name, price, threshold, type, notified, time) VALUES (?,?,?,?,?,?,?)").bind(id, name, price, threshold, 'price', 1, now).run();
   }
 
@@ -491,13 +431,44 @@ async function checkApp(app, env) {
     desp += `- 应用ID: \`${id}\`\n`;
     desp += `[打开 Google Play](https://play.google.com/store/apps/details?id=${id})`;
     await sendSc3(SC3_URL, title, desp);
-    status.last_iap_notified_price = iapInfo.min;
-    status.last_iap_notified_at = now;
+    await DB.prepare("UPDATE apps SET last_iap_notified_price=?, last_iap_notified_at=? WHERE id=?").bind(iapInfo.min, now, id).run();
     await DB.prepare("INSERT INTO notifications (app_id, name, price, threshold, type, notified, time) VALUES (?,?,?,?,?,?,?)").bind(id, name + ' (内购)', iapInfo.min, iap_threshold, 'iap', 1, now).run();
   }
 
-  await KV.put(statusKey, JSON.stringify(status));
-  return { app_id: id, name, ok: true, price, currency: cur, free, threshold, notified: notified || iapNotified, reason, iap: iapInfo, iapNotified, prices_by_country: pricesByCountry, icon, score, scoreText, installs };
+  // 更新 D1 apps 表最新状态
+  const updateFields = [];
+  const updateVals = [];
+  const set = (f, v) => { updateFields.push(f + "=?"); updateVals.push(v); };
+  set("last_price", price);
+  set("last_free", free ? 1 : 0);
+  set("last_currency", cur);
+  set("last_price_text", mainPriceInfo.priceText || `$${price}`);
+  if (icon) set("last_icon", icon);
+  if (score) set("last_score", score);
+  if (scoreText) set("last_score_text", scoreText);
+  if (installs) set("last_installs", installs);
+  if (developer) set("last_developer", typeof developer === 'object' ? (developer.devId || developer.name || JSON.stringify(developer)) : developer);
+  set("last_offers_iap", mainPriceInfo.offersIAP ? 1 : 0);
+  set("last_iap_range", mainPriceInfo.IAPRange || "");
+  set("last_contains_ads", mainPriceInfo.containsAds ? 1 : 0);
+  set("last_prices_by_country", JSON.stringify(pricesByCountry));
+  set("last_checked_at", now);
+  updateFields.push("updated_at=?");
+  updateVals.push(now);
+  updateVals.push(id);
+
+  await DB.prepare("UPDATE apps SET " + updateFields.join(",") + " WHERE id=?").bind(...updateVals).run();
+
+  return {
+    app_id: id, name, ok: true, price, currency: cur, free, threshold,
+    notified: notified || iapNotified, reason,
+    iap: iapInfo, iapNotified, prices_by_country: pricesByCountry,
+    icon, score, scoreText, installs
+  };
+}
+
+async function sendSc3(url, title, desp) {
+  await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, desp }) });
 }
 
 // ==================== 手动触发价格检查 ====================
@@ -506,12 +477,7 @@ async function handleCheck(env) {
   return jsonResponse(result);
 }
 
-async function sendSc3(url, title, desp) {
-  await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, desp }) });
-}
-
 // ==================== Trend API ====================
-// GET /api/trend?appId=xxx&country=us&range=week|month|year
 async function handleTrend(request, env) {
   const url = new URL(request.url);
   const appId = url.searchParams.get("appId");
@@ -519,13 +485,11 @@ async function handleTrend(request, env) {
   const range = url.searchParams.get("range") || "week";
   const country = url.searchParams.get("country") || "us";
 
-  let interval, limit;
   const now = new Date();
   let since;
-
-  if (range === "week") { since = new Date(now.getTime() - 7 * 86400000).toISOString(); interval = 1; }
-  else if (range === "month") { since = new Date(now.getTime() - 30 * 86400000).toISOString(); interval = 1; }
-  else if (range === "year") { since = new Date(now.getTime() - 365 * 86400000).toISOString(); interval = 24; } // 按天采样
+  if (range === "week") since = new Date(now.getTime() - 7 * 86400000).toISOString();
+  else if (range === "month") since = new Date(now.getTime() - 30 * 86400000).toISOString();
+  else if (range === "year") since = new Date(now.getTime() - 365 * 86400000).toISOString();
   else return jsonResponse({ error: "invalid range" }, 400);
 
   try {
@@ -534,28 +498,15 @@ async function handleTrend(request, env) {
     ).bind(appId, country, since).all();
 
     let data = rows.results || [];
-
-    // 年视图：按天聚合（取每天最后一条）
     if (range === "year") {
       const dayMap = {};
-      for (const r of data) {
-        const day = r.recorded_at.substring(0, 10);
-        dayMap[day] = r;
-      }
+      for (const r of data) { dayMap[r.recorded_at.substring(0, 10)] = r; }
       data = Object.values(dayMap).sort((a, b) => a.recorded_at.localeCompare(b.recorded_at));
     }
 
     return jsonResponse({
-      ok: true,
-      app_id: appId,
-      range,
-      data: data.map(r => ({
-        price: r.price,
-        free: !!r.free,
-        currency: r.currency,
-        priceText: r.price_text,
-        time: r.recorded_at
-      }))
+      ok: true, app_id: appId, range,
+      data: data.map(r => ({ price: r.price, free: !!r.free, currency: r.currency, priceText: r.price_text, time: r.recorded_at }))
     });
   } catch (e) {
     return jsonResponse({ ok: false, error: e.message });
@@ -563,19 +514,29 @@ async function handleTrend(request, env) {
 }
 
 // ==================== 数据迁移 ====================
-// POST /api/migrate — 将 KV 数据迁移到 D1 + R2
 async function handleMigrate(env) {
-  const { KV, DB, ICONS } = env;
-  const result = { apps: 0, icons: 0, notifications: 0, errors: [] };
+  const { DB, ICONS } = env;
+  const KV = env.KV;
+  const result = { apps: 0, icons: 0, notifications: 0, status_restored: 0, errors: [] };
 
-  // 1. 迁移应用配置
+  // 1. 迁移应用配置 + 状态
   try {
-    const apps = await KV.get("config:apps", "json") || [];
+    const kvApps = await KV.get("config:apps", "json") || [];
     const now = new Date().toISOString();
-    for (const app of apps) {
+    for (const app of kvApps) {
       try {
+        // 读取 KV 中的状态数据
+        const st = await KV.get("status:" + app.id, "json") || {};
         await DB.prepare(
-          "INSERT OR REPLACE INTO apps (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+          `INSERT OR REPLACE INTO apps
+           (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,
+            created_at,updated_at,
+            last_price,last_free,last_currency,last_price_text,last_icon,last_score,last_score_text,
+            last_installs,last_developer,last_offers_iap,last_iap_range,last_contains_ads,
+            last_prices_by_country,last_notified_price,last_notified_at,
+            last_iap_notified_price,last_iap_notified_at,last_checked_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,
+             ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
         ).bind(
           app.id, app.name || app.id,
           app.threshold ?? 6,
@@ -586,9 +547,29 @@ async function handleMigrate(env) {
           app.monitor_mode || "threshold",
           app.monitor_iap ? 1 : 0,
           app.iap_threshold || null,
-          app.created_at || now, now
+          app.created_at || now, now,
+          // 状态字段
+          st.last_checked_price ?? null,
+          st.last_checked_free ?? 0,
+          "USD",
+          null,
+          st.icon || "",
+          st.score ?? null,
+          st.scoreText || "",
+          st.installs || "",
+          typeof st.developer === 'object' ? JSON.stringify(st.developer) : (st.developer || ""),
+          st.offersIAP ? 1 : 0,
+          st.IAPRange || "",
+          st.containsAds ? 1 : 0,
+          JSON.stringify(st.prices_by_country || {}),
+          st.last_notified_price ?? null,
+          st.last_notified_at || null,
+          st.last_iap_notified_price ?? null,
+          st.last_iap_notified_at || null,
+          st.last_checked_at || null
         ).run();
         result.apps++;
+        if (Object.keys(st).length > 0) result.status_restored++;
       } catch (e) { result.errors.push(`app ${app.id}: ${e.message}`); }
     }
   } catch (e) { result.errors.push("read config:apps: " + e.message); }
@@ -617,7 +598,6 @@ async function handleMigrate(env) {
           if (existing) continue;
           const data = await KV.get(key.name, "text");
           if (!data) continue;
-          // 解析 base64
           const parts = data.split(",");
           if (parts.length < 2) continue;
           const mime = parts[0].match(/data:([^;]+)/);

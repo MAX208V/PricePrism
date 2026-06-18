@@ -428,7 +428,14 @@ async function deleteApp(id) {
 }
 
 // ---- Init ----
-document.getElementById('searchInput').addEventListener('keydown', e => {
+document.addEventListener('click', function(e) {
+  const searchCard = document.querySelector('.card--search');
+  const results = document.getElementById('searchResults');
+  if (results && results.classList.contains('visible') && searchCard && !searchCard.contains(e.target)) {
+    results.innerHTML = '';
+    results.classList.remove('visible');
+  }
+});
   if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
 });
 

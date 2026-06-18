@@ -58,18 +58,26 @@ export async function handleAppsApi(request, env) {
 
     let name = body.name;
     let preIcon = '';
+    let prePrice = null;
+    let preFree = 0;
+    let preCurrency = 'USD';
     try {
       const info = await fetchAppInfo(env, body.app_id, countries[0]);
       if (info) {
         if (!name || name.trim() === '') name = info.title || name;
         preIcon = info.icon || '';
+        prePrice = info.price ?? null;
+        preFree = info.free ? 1 : 0;
+        preCurrency = info.currency || 'USD';
         if (info.icon && ICONS) await cacheIcon(ICONS, body.app_id, info.icon);
       }
     } catch (e) {}
 
     await DB.prepare(
-      `INSERT INTO apps (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,created_at,updated_at,last_icon)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      `INSERT INTO apps
+       (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,
+        created_at,updated_at,last_icon,last_price,last_free,last_currency,base_price,base_currency,last_notified_price)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
     ).bind(
       body.app_id, name || body.app_id,
       body.threshold ?? DEFAULT_THRESHOLD,
@@ -80,7 +88,8 @@ export async function handleAppsApi(request, env) {
       body.monitor_mode || "threshold",
       body.monitor_iap ? 1 : 0,
       body.iap_threshold || null,
-      now, now, preIcon
+      now, now,
+      preIcon, prePrice, preFree, preCurrency, prePrice, preCurrency, prePrice
     ).run();
 
     return jsonResponse({ ok: true });

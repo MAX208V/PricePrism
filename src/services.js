@@ -73,13 +73,11 @@ export async function checkApp(app, env) {
   if (monitor_mode !== "change" && !free && price > 0) {
     if (price < threshold) {
       const last = app.last_notified_price;
-      if (last === undefined || last === null) { notified = true; reason = "first_drop"; }
-      else if (price < last) { notified = true; reason = "price_dropped"; }
+      if (last !== undefined && last !== null && price < last) { notified = true; reason = "price_dropped"; }
     }
   } else if (monitor_mode === "change") {
-    const lp = app.last_price;
-    const lf = app.last_free;
-    if (lp !== null && (price !== lp || free !== lf)) { notified = true; reason = "price_changed"; }
+    const bp = app.base_price;
+    if (bp !== null && price !== bp) { notified = true; reason = "price_changed"; }
   }
 
   // IAP 监控
@@ -136,6 +134,9 @@ export async function checkApp(app, env) {
   set("last_contains_ads", mainPriceInfo.containsAds ? 1 : 0);
   set("last_prices_by_country", JSON.stringify(pricesByCountry));
   set("last_checked_at", now);
+  // 如果未设基准价则设
+  if (app.base_price === null || app.base_price === undefined) set("base_price", price);
+  if (app.base_currency === null || app.base_currency === undefined) set("base_currency", cur);
   updates.push("updated_at=?");
   vals.push(now);
   vals.push(id);

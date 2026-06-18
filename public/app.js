@@ -66,6 +66,7 @@ function getCountryName(code) {
 async function loadDashboard() {
   try {
     const data = await api('/api/dashboard');
+    window._apps = data.apps;
     renderApps(data.apps);
     renderHistory(data.history);
   } catch (e) { showToast('加载失败: ' + e.message); }
@@ -115,6 +116,8 @@ function renderApps(apps) {
             (score ? '<span>★ ' + escapeHtml(score) + '</span>' : '') +
             (isBelow ? '<span class="badge badge--success">低于阈值</span>' : '') +
             (isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '') +
+            (app.base_price !== null && price !== undefined && price !== null && !isFree ? '<span class="badge ' + (price < app.base_price ? 'badge--success' : 'badge--info') + '">' +
+              (price < app.base_price ? '▼' : price > app.base_price ? '▲' : '') + '$' + Math.abs(price - app.base_price).toFixed(2) + '</span>' : '') +
             (app.last_offers_iap ? '<span class="badge badge--success">含内购</span>' : '') +
             (appCountries.length > 1 ? '<span class="badge badge--primary">' + appCountries.length + '区域</span>' : '') +
           '</div>' +
@@ -187,7 +190,7 @@ function renderApps(apps) {
       (note ? '<div class="app-card-note"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-right:4px;">sticky_note_2</span>' + escapeHtml(note) + '</div>' : '') +
 
       '<div class="app-card-actions">' +
-        '<button class="btn btn-icon" onclick="openEditModal(\'' + escapeHtml(app.id) + '\',\'' + escapeHtml(app.name) + '\',\'' + escapeHtml(app.country || 'us') + '\',' + threshold + ',\'' + escapeHtml(note) + '\',' + isChangeMode + ',' + monitorIAP + ',\'' + escapeHtml(iapThreshold) + '\',\'' + escapeHtml(JSON.stringify(appCountries)) + '\')"><span class="material-symbols-rounded">edit</span></button>' +
+        '<button class="btn btn-icon" onclick="openEditModal(\'' + escapeHtml(app.id) + '\')"><span class="material-symbols-rounded">edit</span></button>' +
         '<button class="btn btn-icon" onclick="deleteApp(\'' + escapeHtml(app.id) + '\')" style="color:var(--negative)"><span class="material-symbols-rounded">delete</span></button>' +
       '</div>' +
     '</div>';
@@ -364,17 +367,23 @@ async function handleAddApp(e) {
 }
 
 // ---- Edit Modal ----
-function openEditModal(id, name, country, threshold, note, monitorMode, monitorIAP, iapThreshold, countriesJson) {
+function openEditModal(id) {
+  const app = (window._apps || []).find(a => a.id === id);
+  if (!app) return;
   editingAppId = id;
-  document.getElementById('editName').value = name;
-  document.getElementById('editThreshold').value = threshold;
-  document.getElementById('editNote').value = note;
-  document.getElementById('editMonitorMode').checked = monitorMode;
+  document.getElementById('editName').value = app.name || '';
+  document.getElementById('editThreshold').value = app.threshold || 6;
+  document.getElementById('editNote').value = app.note || '';
+  document.getElementById('editBasePrice').value = (app.base_price !== null && app.base_price !== undefined) ? app.base_price : '';
+  document.getElementById('editMonitorMode').checked = app.monitor_mode === 'change';
 
   // 填充已选区域
   const existingCountries = [];
-  try { const parsed = JSON.parse(countriesJson); if (Array.isArray(parsed)) existingCountries.push(...parsed); } catch (e) {}
-  if (existingCountries.length === 0) existingCountries.push(country);
+  try {
+    const raw = typeof app.countries === 'string' ? JSON.parse(app.countries) : (app.countries || [app.country || 'us']);
+    if (Array.isArray(raw)) existingCountries.push(...raw);
+  } catch (e) {}
+  if (existingCountries.length === 0) existingCountries.push(app.country || 'us');
   document.querySelectorAll('#editCountries .country-checkbox').forEach(cb => {
     cb.checked = existingCountries.includes(cb.value);
   });
@@ -384,8 +393,8 @@ function openEditModal(id, name, country, threshold, note, monitorMode, monitorI
   if (iapRow) {
     const checkbox = iapRow.querySelector('.iap-checkbox');
     const thresholdInput = iapRow.querySelector('.iap-threshold-input');
-    if (checkbox) checkbox.checked = monitorIAP || false;
-    if (thresholdInput) thresholdInput.value = iapThreshold || '';
+    if (checkbox) checkbox.checked = app.monitor_iap || false;
+    if (thresholdInput) thresholdInput.value = app.iap_threshold || '';
   }
   document.getElementById('editOverlay').classList.add('visible');
 }
@@ -418,6 +427,7 @@ async function handleEditApp() {
       method: 'PATCH',
       body: JSON.stringify({
         app_id: editingAppId, name, threshold, note,
+        base_price: parseFloat(document.getElementById('editBasePrice').value) || null,
         monitor_mode: monitorMode ? 'change' : 'threshold',
         countries: selectedCountries,
         monitor_iap: monitorIAP, iap_threshold: iapThreshold
@@ -452,7 +462,7 @@ async function checkPrices() {
       return;
     }
     showToast('检查完成 (' + (data.results?.filter(r=>r.ok).length || 0) + '/' + (data.results?.length || 0) + ')');
-    await loadApps();
+    await loadDashboard();
   } catch (e) {
     showToast('请求失败: ' + e.message);
   } finally {

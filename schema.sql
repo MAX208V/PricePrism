@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS apps (
   iap_threshold REAL,
   created_at TEXT,
   updated_at TEXT,
+  base_price REAL,
+  base_currency TEXT DEFAULT 'USD',
   last_price REAL,
   last_free INTEGER DEFAULT 0,
   last_currency TEXT DEFAULT 'USD',

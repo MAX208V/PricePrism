@@ -96,6 +96,7 @@
     <div class="modal-body">
       <div class="form-field"><label class="label">应用名称</label><input type="text" class="input" id="editName"></div>
       <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" id="editThreshold" step="0.01" min="0.01"></div>
+      <div class="form-field"><label class="label">基准价格 $</label><input type="number" class="input" id="editBasePrice" step="0.01" min="0" placeholder="留空为无基准"></div>
       <div class="form-field"><label class="label">备注</label><input type="text" class="input" id="editNote"></div>
       <div class="form-field"><label class="label">监控区域 <button type="button" class="btn btn--ghost btn--sm" onclick="toggleCountryPicker('editCountries')" style="font-size:11px;">选择区域</button></label>
         <div id="editCountries" class="country-grid" style="display:none;"></div>

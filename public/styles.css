@@ -231,6 +231,7 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 /* Badges */
 .badge { display: inline-block; padding: 1px 6px; border-radius: 99px; font-size: 10px; font-weight: 600; line-height: 1.4; }
 .badge--success { background: rgba(59,138,47,.12); color: var(--success); }
+.badge--info { background: rgba(234,170,34,.15); color: #c97d00; }
 .badge--warning { background: rgba(232,162,84,.12); color: var(--warning); }
 .badge--primary { background: var(--primary-pale); color: var(--positive-deep); }
 

@@ -60,28 +60,6 @@ export function parseCountries(app) {
 
 }
 
-  if (!rangeStr) return null;
-
-  const clean = rangeStr.replace(/\s*per\s*item\s*$/i, '').trim();
-
-  const parts = clean.split('-').map(s => s.trim());
-
-  if (parts.length < 1) return null;
-
-  const toNum = (s) => { const m = s.match(/[\d.]+/); return m ? parseFloat(m[0]) : null; };
-
-  const min = toNum(parts[0]);
-
-  const max = parts.length > 1 ? toNum(parts[parts.length - 1]) : min;
-
-  if (min === null) return null;
-
-  const m = clean.match(/^([^\d.]+)/);
-
-  return { min, max, text: clean, currencySymbol: m ? m[1].trim() : '$' };
-
-}
-
 export function parseDeveloper(dev) {
 
   if (!dev) return '';
@@ -93,4 +71,4 @@ export function parseDeveloper(dev) {
   return '';
 }
 
-export { jsonResponse, parseCountries, parseDeveloper, COUNTRY_NAMES, DEFAULT_COUNTRY, DEFAULT_LANG, DEFAULT_THRESHOLD, HISTORY_MAX };
+

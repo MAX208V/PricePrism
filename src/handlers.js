@@ -1,5 +1,6 @@
 // ==================== API 处理器 ====================
 import {
+  jsonResponse, parseCountries, COUNTRY_NAMES,
   DEFAULT_COUNTRY, DEFAULT_LANG, DEFAULT_THRESHOLD, HISTORY_MAX
 } from './utils.js';
 import { fetchAppInfo, fetchAppPrice, cacheIcon, getCachedIcon, getApps, getNotifications, getPriceHistory } from './storage.js';

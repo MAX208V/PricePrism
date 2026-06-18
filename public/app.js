@@ -80,7 +80,8 @@ function renderApps(apps) {
     return;
   }
 
-  container.innerHTML = apps.map(app => {
+  container.innerHTML = apps.map((app, i) => {
+    const sep = i > 0 ? '<div class="app-card-sep"></div>' : '';
     const st = app.status || {};
     const price = st.last_checked_price;
     const isFree = st.last_checked_free;
@@ -97,7 +98,7 @@ function renderApps(apps) {
     const appCountries = app.countries || [app.country || 'us'];
     const pricesByCountry = st.prices_by_country || {};
 
-    return '<div class="app-card">' +
+    return sep + '<div class="app-card">' +
       '<div class="app-card-main">' +
         (icon ? '<img src="' + escapeHtml(icon) + '" class="app-card-icon" onerror="this.style.display=\'none\'">' : '<div class="app-card-icon"></div>') +
         '<div class="app-card-body">' +

@@ -48,8 +48,10 @@
     <div class="card-header">
       <span class="card-logo"><span class="material-symbols-rounded">monitoring</span></span>
       <span class="card-title">监控列表</span>
-      <button class="btn btn-icon" onclick="checkPrices()" title="立即检查价格"><span class="material-symbols-rounded" style="font-size:18px;">refresh</span></button>
-      <span class="card-badge" id="appsCount">0</span>
+      <span class="card-actions">
+        <button class="card-refresh" onclick="checkPrices()" title="立即检查价格"><span class="material-symbols-rounded">refresh</span></button>
+        <span class="card-badge" id="appsCount">0</span>
+      </span>
     </div>
     <div id="appsList"></div>
   </section>

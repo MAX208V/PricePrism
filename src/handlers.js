@@ -1,0 +1,297 @@
+// ==================== API 处理器 ====================
+import {
+  jsonResponse, parseCountries, parseIAPRange, COUNTRY_NAMES,
+  DEFAULT_COUNTRY, DEFAULT_LANG, DEFAULT_THRESHOLD, HISTORY_MAX
+} from './utils.js';
+import { fetchAppInfo, fetchAppPrice, cacheIcon, getCachedIcon, getApps, getNotifications, getPriceHistory } from './storage.js';
+import { monitorAndNotify } from './services.js';
+
+// ── 仪表盘 ──
+export async function handleDashboard(env) {
+  const { DB, ICONS } = env;
+  const apps = await getApps(DB);
+
+  for (const app of apps) {
+    app.countries = JSON.stringify(parseCountries(app));
+    app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+  }
+
+  const history = await getNotifications(DB, HISTORY_MAX);
+  return jsonResponse({ apps, history, has_sc3: !!env.SC3_URL, has_api: !!env.PLAY_API });
+}
+
+// ── 国家列表 ──
+export function handleCountries() {
+  return jsonResponse(COUNTRY_NAMES);
+}
+
+// ── Bing 壁纸 ──
+export async function handleBg() {
+  try {
+    const resp = await fetch("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US");
+    if (!resp.ok) return jsonResponse({ url: null });
+    const data = await resp.json();
+    const img = data.images?.[0];
+    return jsonResponse({ url: img ? "https://www.bing.com" + img.url : null, title: img?.copyright || "" });
+  } catch (e) { return jsonResponse({ url: null }); }
+}
+
+// ── 应用 CRUD ──
+export async function handleAppsApi(request, env) {
+  const { DB, ICONS } = env;
+
+  if (request.method === "GET") {
+    const apps = await getApps(DB);
+    for (const app of apps) {
+      app.countries = JSON.stringify(parseCountries(app));
+      app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+    }
+    return jsonResponse(apps);
+  }
+
+  if (request.method === "POST") {
+    const body = await request.json();
+    if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
+
+    const countries = body.countries || [body.country || DEFAULT_COUNTRY];
+    const now = new Date().toISOString();
+
+    let name = body.name;
+    let preIcon = '';
+    try {
+      const info = await fetchAppInfo(env, body.app_id, countries[0]);
+      if (info) {
+        if (!name || name.trim() === '') name = info.title || name;
+        preIcon = info.icon || '';
+        if (info.icon && ICONS) await cacheIcon(ICONS, body.app_id, info.icon);
+      }
+    } catch (e) {}
+
+    await DB.prepare(
+      `INSERT INTO apps (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,created_at,updated_at,last_icon)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(
+      body.app_id, name || body.app_id,
+      body.threshold ?? DEFAULT_THRESHOLD,
+      countries[0] || DEFAULT_COUNTRY,
+      JSON.stringify(countries),
+      body.lang || DEFAULT_LANG,
+      body.note || "",
+      body.monitor_mode || "threshold",
+      body.monitor_iap ? 1 : 0,
+      body.iap_threshold || null,
+      now, now, preIcon
+    ).run();
+
+    return jsonResponse({ ok: true });
+  }
+
+  if (request.method === "DELETE") {
+    const body = await request.json();
+    if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
+    await DB.prepare("DELETE FROM apps WHERE id = ?").bind(body.app_id).run();
+    return jsonResponse({ ok: true });
+  }
+
+  if (request.method === "PATCH") {
+    const body = await request.json();
+    if (!body.app_id) return jsonResponse({ error: "app_id required" }, 400);
+    const fields = [];
+    const values = [];
+    for (const [k, v] of Object.entries(body)) {
+      if (k === "app_id" || k === "id") continue;
+      if (k === "monitor_iap") { fields.push("monitor_iap=?"); values.push(v ? 1 : 0); continue; }
+      fields.push(k + "=?");
+      values.push(v);
+    }
+    if (fields.length === 0) return jsonResponse({ error: "no fields" }, 400);
+    if (body.countries && Array.isArray(body.countries)) {
+      fields.push("country=?");
+      values.push(body.countries[0]);
+      fields.push("countries=?");
+      values.push(JSON.stringify(body.countries));
+    }
+    if (body.name) { fields.push("name=?"); values.push(body.name); }
+    fields.push("updated_at=?");
+    values.push(new Date().toISOString());
+    values.push(body.app_id);
+
+    await DB.prepare("UPDATE apps SET " + fields.join(",") + " WHERE id=?").bind(...values).run();
+    return jsonResponse({ ok: true });
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405);
+}
+
+// ── 搜索 ──
+export async function handleSearch(request, env) {
+  const url = new URL(request.url);
+  const term = url.searchParams.get("term");
+  if (!term) return jsonResponse({ error: "term required" }, 400);
+  const playApi = env.PLAY_API;
+  if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
+  try {
+    const resp = await fetch(`${playApi}/api/apps/?q=${encodeURIComponent(term)}&country=us&lang=en`, { headers: { Accept: "application/json" } });
+    if (!resp.ok) return jsonResponse({ error: `API error: ${resp.status}` }, 500);
+    const data = await resp.json();
+    const results = (data.results || []).map(app => ({
+      appId: app.appId, title: app.title, icon: app.icon,
+      developer: typeof app.developer === 'object' ? (app.developer.devId || app.developer.name || '') : (app.developer || ''),
+      score: app.score, scoreText: app.scoreText, price: app.price, free: app.free,
+      currency: app.currency, containsAds: app.containsAds,
+      offersIAP: app.offersIAP || app.inAppPurchases,
+      IAPRange: (app.IAPRange || '').replace(/\s*per\s*item\s*$/i, '')
+    }));
+    return jsonResponse({ ok: true, results });
+  } catch (e) { return jsonResponse({ error: e.message }, 500); }
+}
+
+// ── 应用详情 ──
+export async function handleAppDetail(request, env) {
+  const url = new URL(request.url);
+  const appId = url.searchParams.get("appId");
+  if (!appId) return jsonResponse({ error: "appId required" }, 400);
+  const playApi = env.PLAY_API;
+  if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
+  try {
+    const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${url.searchParams.get('country') || 'us'}`, { headers: { Accept: "application/json" } });
+    if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
+    const d = await resp.json();
+    return jsonResponse({
+      ok: true, title: d.title, icon: d.icon,
+      developer: typeof d.developer === 'object' ? (d.developer.devId || d.developer.name || '') : (d.developer || ''),
+      score: d.score, scoreText: d.scoreText, price: d.price, free: d.free, currency: d.currency,
+      offersIAP: d.offersIAP || d.inAppPurchases || false,
+      IAPRange: (d.IAPRange || '').replace(/\s*per\s*item\s*$/i, ''),
+      containsAds: d.containsAds, installs: d.installs
+    });
+  } catch (e) { return jsonResponse({ error: e.message }, 500); }
+}
+
+// ── 通知历史 ──
+export async function handleHistory(env) {
+  const history = await getNotifications(env.DB, HISTORY_MAX);
+  return jsonResponse(history);
+}
+
+// ── 价格走势 ──
+export async function handleTrend(request, env) {
+  const url = new URL(request.url);
+  const appId = url.searchParams.get("appId");
+  if (!appId) return jsonResponse({ error: "appId required" }, 400);
+  const range = url.searchParams.get("range") || "week";
+  const country = url.searchParams.get("country") || "us";
+
+  const now = new Date();
+  let since;
+  if (range === "week") since = new Date(now.getTime() - 7 * 86400000).toISOString();
+  else if (range === "month") since = new Date(now.getTime() - 30 * 86400000).toISOString();
+  else if (range === "year") since = new Date(now.getTime() - 365 * 86400000).toISOString();
+  else return jsonResponse({ error: "invalid range" }, 400);
+
+  let data = await getPriceHistory(env.DB, appId, country, since);
+  if (range === "year") {
+    const dayMap = {};
+    for (const r of data) { dayMap[r.recorded_at.substring(0, 10)] = r; }
+    data = Object.values(dayMap).sort((a, b) => a.recorded_at.localeCompare(b.recorded_at));
+  }
+
+  return jsonResponse({
+    ok: true, app_id: appId, range,
+    data: data.map(r => ({ price: r.price, free: !!r.free, currency: r.currency, priceText: r.price_text, time: r.recorded_at }))
+  });
+}
+
+// ── 手动触发检查 ──
+export async function handleCheck(env) {
+  const result = await monitorAndNotify(env);
+  return jsonResponse(result);
+}
+
+// ── KV → D1+R2 数据迁移 ──
+export async function handleMigrate(env) {
+  const { DB, ICONS, KV } = env;
+  const result = { apps: 0, icons: 0, notifications: 0, status_restored: 0, errors: [] };
+  const now = new Date().toISOString();
+
+  // 1. 迁移应用配置 + 状态
+  try {
+    const kvApps = await KV.get("config:apps", "json") || [];
+    for (const app of kvApps) {
+      try {
+        const st = await KV.get("status:" + app.id, "json") || {};
+        await DB.prepare(
+          `INSERT OR REPLACE INTO apps
+           (id,name,threshold,country,countries,lang,note,monitor_mode,monitor_iap,iap_threshold,
+            created_at,updated_at,
+            last_price,last_free,last_currency,last_price_text,last_icon,last_score,last_score_text,
+            last_installs,last_developer,last_offers_iap,last_iap_range,last_contains_ads,
+            last_prices_by_country,last_notified_price,last_notified_at,
+            last_iap_notified_price,last_iap_notified_at,last_checked_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,
+             ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+        ).bind(
+          app.id, app.name || app.id,
+          app.threshold ?? 6,
+          app.country || "us",
+          JSON.stringify(app.countries || [app.country || "us"]),
+          app.lang || "en",
+          app.note || "",
+          app.monitor_mode || "threshold",
+          app.monitor_iap ? 1 : 0,
+          app.iap_threshold || null,
+          app.created_at || now, now,
+          st.last_checked_price ?? null,
+          st.last_checked_free ?? 0, "USD", null,
+          st.icon || "",
+          st.score ?? null, st.scoreText || "",
+          st.installs || "",
+          typeof st.developer === 'object' ? JSON.stringify(st.developer) : (st.developer || ""),
+          st.offersIAP ? 1 : 0, st.IAPRange || "", st.containsAds ? 1 : 0,
+          JSON.stringify(st.prices_by_country || {}),
+          st.last_notified_price ?? null, st.last_notified_at || null,
+          st.last_iap_notified_price ?? null, st.last_iap_notified_at || null,
+          st.last_checked_at || null
+        ).run();
+        result.apps++;
+        if (Object.keys(st).length > 0) result.status_restored++;
+      } catch (e) { result.errors.push(`app ${app.id}: ${e.message}`); }
+    }
+  } catch (e) { result.errors.push("read config:apps: " + e.message); }
+
+  // 2. 迁移通知历史
+  try {
+    const history = await KV.get("history", "json") || [];
+    for (const h of history) {
+      try {
+        await DB.prepare(
+          "INSERT INTO notifications (app_id, name, price, threshold, type, notified, time) VALUES (?,?,?,?,?,?,?)"
+        ).bind(h.app_id || "", h.name || "", h.price || 0, h.threshold || 0, h.type || "price", h.notified ? 1 : 0, h.time || now).run();
+        result.notifications++;
+      } catch (e) { result.errors.push(`notification: ${e.message}`); }
+    }
+  } catch (e) { result.errors.push("read history: " + e.message); }
+
+  // 3. 迁移图标 (KV → R2)
+  if (ICONS) {
+    try {
+      const listResult = await KV.list({ prefix: "icon_data:" });
+      for (const key of listResult.keys) {
+        try {
+          const appId = key.name.substring(10);
+          if (await ICONS.get("icons/" + appId)) continue;
+          const data = await KV.get(key.name, "text");
+          if (!data) continue;
+          const parts = data.split(",");
+          if (parts.length < 2) continue;
+          const mime = parts[0].match(/data:([^;]+)/);
+          const buf = Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0));
+          await ICONS.put("icons/" + appId, buf, { httpMetadata: { contentType: mime ? mime[1] : "image/png" } });
+          result.icons++;
+        } catch (e) { result.errors.push(`icon ${key.name}: ${e.message}`); }
+      }
+    } catch (e) { result.errors.push("icon migration: " + e.message); }
+  }
+
+  return jsonResponse(result);
+}

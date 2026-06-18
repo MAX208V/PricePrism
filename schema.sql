@@ -1,7 +1,6 @@
 -- PricePrism D1 数据库 Schema (v2 — D1全量)
 -- 部署: wrangler d1 execute priceprism-db --file=schema.sql
 
--- 应用配置表（含最新状态）
 CREATE TABLE IF NOT EXISTS apps (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL DEFAULT '',
@@ -15,7 +14,6 @@ CREATE TABLE IF NOT EXISTS apps (
   iap_threshold REAL,
   created_at TEXT,
   updated_at TEXT,
-  -- 最新状态（不再用 KV）
   last_price REAL,
   last_free INTEGER DEFAULT 0,
   last_currency TEXT DEFAULT 'USD',
@@ -36,7 +34,6 @@ CREATE TABLE IF NOT EXISTS apps (
   last_checked_at TEXT
 );
 
--- 价格走势记录表
 CREATE TABLE IF NOT EXISTS price_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   app_id TEXT NOT NULL,
@@ -51,7 +48,6 @@ CREATE TABLE IF NOT EXISTS price_history (
 CREATE INDEX IF NOT EXISTS idx_price_app ON price_history(app_id, country, recorded_at);
 CREATE INDEX IF NOT EXISTS idx_price_time ON price_history(recorded_at);
 
--- 通知记录表
 CREATE TABLE IF NOT EXISTS notifications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   app_id TEXT NOT NULL,

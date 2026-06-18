@@ -428,6 +428,10 @@ async function deleteApp(id) {
 }
 
 // ---- Init ----
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+});
+
 document.addEventListener('click', function(e) {
   const searchCard = document.querySelector('.card--search');
   const results = document.getElementById('searchResults');
@@ -435,8 +439,6 @@ document.addEventListener('click', function(e) {
     results.innerHTML = '';
     results.classList.remove('visible');
   }
-});
-  if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
 });
 
 (async function init() {

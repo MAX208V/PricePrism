@@ -416,6 +416,17 @@ function toggleCountryPicker(id) {
   if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 
+// ---- 立即检查 ----
+async function checkPrices() {
+  try {
+    await fetch('/api/check', { method: 'POST' });
+    showToast('检查完成');
+    setTimeout(() => location.reload(), 1000);
+  } catch (e) {
+    showToast('检查失败: ' + e.message);
+  }
+}
+
 // ---- 添加表单折叠 ----
 function toggleAddForm() {
   const form = document.getElementById('addForm');

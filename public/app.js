@@ -416,6 +416,16 @@ function toggleCountryPicker(id) {
   if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 
+// ---- 添加表单折叠 ----
+function toggleAddForm() {
+  const form = document.getElementById('addForm');
+  const arrow = document.querySelector('.add-arrow');
+  if (!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? 'expand_more' : 'expand_less';
+}
+
 // ---- Delete ----
 async function deleteApp(id) {
   if (!confirm('确认删除此应用？')) return;

@@ -84,7 +84,22 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .btn-icon { padding: 6px; border-radius: 6px; }
 .btn-icon .material-symbols-rounded { font-size: 18px; }
 
-.btn-row { margin-bottom: var(--space-sm); }
+.add-collapse {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px dashed var(--canvas);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+  transition: color .15s;
+}
+.add-collapse:hover { color: var(--body); }
+.add-collapse .material-symbols-rounded { font-size: 18px; }
+.add-arrow { transition: transform .2s; }
 
 /* App Cards */
 .app-card { padding: 0 0 var(--space-sm); }

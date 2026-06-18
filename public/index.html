@@ -13,7 +13,7 @@
     </div>
   </header>
 
-  <!-- 搜索卡片 -->
+  <!-- 搜索卡片（含添加功能） -->
   <section class="card card--search">
     <div class="card-header">
       <span class="card-logo"><span class="material-symbols-rounded">search</span></span>
@@ -24,15 +24,13 @@
       <button class="btn btn--primary" onclick="doSearch()"><span class="material-symbols-rounded">search</span></button>
     </div>
     <div id="searchResults" class="search-results"></div>
-  </section>
 
-  <!-- 添加监控卡片 -->
-  <section class="card">
-    <div class="card-header">
-      <span class="card-logo"><span class="material-symbols-rounded">add_circle</span></span>
-      <span class="card-title">添加监控</span>
+    <div class="add-collapse" onclick="toggleAddForm()">
+      <span class="material-symbols-rounded">add_circle</span>
+      <span>添加手动监控</span>
+      <span class="material-symbols-rounded add-arrow">expand_more</span>
     </div>
-    <form class="add-form" onsubmit="handleAddApp(event)">
+    <form class="add-form" id="addForm" onsubmit="handleAddApp(event)" style="display:none;">
       <div class="form-field"><label class="label">包名 *</label><input type="text" class="input" name="app_id" required placeholder="com.example.app"></div>
       <div class="form-field"><label class="label">显示名称</label><input type="text" class="input" name="name" placeholder="留空自动获取"></div>
       <div class="form-field"><label class="label">降价阈值 $</label><input type="number" class="input" name="threshold" step="0.01" min="0.01" value="6" required></div>

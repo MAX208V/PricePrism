@@ -463,6 +463,14 @@ document.addEventListener('click', function(e) {
 
 (async function init() {
   await loadCountries();
+  // 加载背景
+  try {
+    const bg = await api('/api/bg');
+    if (bg.url) {
+      const el = document.getElementById('bgWallpaper');
+      if (el) el.style.backgroundImage = 'url(' + bg.url + ')';
+    }
+  } catch (_) {}
   // 填充国家选择器
   const addDiv = document.getElementById('addCountries');
   const editDiv = document.getElementById('editCountries');

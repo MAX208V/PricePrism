@@ -33,6 +33,7 @@ export default {
     if (path === "/api/search") return handleSearch(request, env);
     if (path === "/api/app-detail") return handleAppDetail(request, env);
     if (path === "/api/countries") return handleCountries();
+    if (path === "/api/bg") return handleBg();
     if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 
     const response = await env.ASSETS.fetch(request);
@@ -46,6 +47,23 @@ export default {
 // ==================== Countries API ====================
 function handleCountries() {
   return jsonResponse(COUNTRY_NAMES);
+}
+
+// ==================== Bing Wallpaper API ====================
+async function handleBg() {
+  try {
+    const resp = await fetch("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US");
+    if (!resp.ok) return jsonResponse({ url: null });
+    const data = await resp.json();
+    const img = data.images?.[0];
+    if (!img) return jsonResponse({ url: null });
+    return jsonResponse({
+      url: "https://www.bing.com" + img.url,
+      title: img.copyright || ""
+    });
+  } catch (e) {
+    return jsonResponse({ url: null });
+  }
 }
 
 // ==================== Dashboard API ====================

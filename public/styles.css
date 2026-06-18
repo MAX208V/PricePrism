@@ -45,8 +45,6 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
 .card-header { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); font-size: 14px; font-weight: 600; }
 .card-logo { display: flex; align-items: center; }
 .card-logo .material-symbols-rounded { font-size: 20px; color: var(--primary-deep); }
-.card-badge { background: var(--primary-pale); color: var(--positive-deep); padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
-
 .card-actions {
   margin-left: auto;
   display: inline-flex;
@@ -54,27 +52,34 @@ html { font-family: var(--font); background: var(--bg); color: var(--body); font
   gap: 2px;
 }
 
-.card-refresh {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.card-badge, .card-refresh {
   background: var(--primary-pale);
   color: var(--positive-deep);
-  border: none;
-  border-radius: 99px;
   padding: 2px 8px;
-  cursor: pointer;
+  border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.5;
+  display: inline-block;
+  text-align: center;
+}
+
+.card-refresh {
+  cursor: pointer;
+  border: none;
   font-family: inherit;
   transition: all .15s;
-  line-height: 1.4;
-  appearance: none;
-  -webkit-appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .card-refresh .material-symbols-rounded {
-  font-size: 12px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: inherit;
+  vertical-align: middle;
+}
+.card-refresh:hover {
+  background: var(--primary-deep);
+  color: #fff;
 }
 .card--search { position: sticky; top: var(--space-md); z-index: 10; }
 .card--list { }

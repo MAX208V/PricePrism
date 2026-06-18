@@ -34,9 +34,8 @@ function getPriceDisplay(r) {
   let text;
   if (isFree) {
     text = '免费';
-    if (ads && iap) text += '·内购+广告';
+    if (ads && iap) text += '·含广告';
     else if (ads) text += '·含广告';
-    else if (iap) text += '·含内购';
   } else {
     text = '$' + parseFloat(r.price).toFixed(2);
   }

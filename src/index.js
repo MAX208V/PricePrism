@@ -41,7 +41,14 @@ export default {
       if (response.status === 404) {
         return env.ASSETS.fetch(new URL('/index.html', url.origin));
       }
-      return response;
+      // 添加缓存控制头
+      const headers = new Headers(response.headers);
+      headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
     } catch (e) {
       console.error("[Error]", path, e.message);
       return jsonResponse({ error: e.message }, 500);

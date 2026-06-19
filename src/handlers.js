@@ -9,15 +9,29 @@ import { monitorAndNotify } from './services.js';
 // ── 仪表盘 ──
 export async function handleDashboard(env) {
   const { DB, ICONS } = env;
-  const apps = await getApps(DB);
-
-  for (const app of apps) {
-    app.countries = JSON.stringify(parseCountries(app));
-    app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+  let apps = [];
+  let history = [];
+  
+  try {
+    apps = await getApps(DB);
+    for (const app of apps) {
+      app.countries = JSON.stringify(parseCountries(app));
+      app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+    }
+    
+    history = await getNotifications(DB, HISTORY_MAX);
+  } catch (e) {
+    console.error("[Dashboard Error]", e.message);
+    // 即使有错误也返回部分数据
   }
-
-  const history = await getNotifications(DB, HISTORY_MAX);
-  return jsonResponse({ apps, history, has_sc3: !!env.SC3_URL, has_api: !!env.PLAY_API });
+  
+  return jsonResponse({ 
+    apps: apps || [], 
+    history: history || [], 
+    has_sc3: !!env.SC3_URL, 
+    has_api: !!env.PLAY_API,
+    status: "ok"
+  });
 }
 
 // ── 国家列表 ──

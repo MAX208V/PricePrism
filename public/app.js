@@ -97,7 +97,7 @@ function renderApps(apps) {
           '</div>' +
         '</div>' +
         '<div class="app-card-right">' +
-          '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\'' + escapeHtml(app.id) + '\',this)" style="cursor:pointer;">' +
+          '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\x27' + escapeHtml(app.id) + '\x27,this)" style="cursor:pointer;">' +
             '<div class="app-card-price-value">' + priceInfo.text + '</div>' +
           '</div>' +
           '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : thresholdType === 'percent' ? '阈值 ' + thresholdPct + '%' : '阈值 $' + threshold) + '</div>' +
@@ -105,9 +105,9 @@ function renderApps(apps) {
       '</div>' +
       '<div class="app-card-trend" id="trend-' + escapeHtml(app.id) + '" style="display:none;">' +
         '<div class="trend-tabs">' +
-          '<span class="trend-tab active" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'week\',this)">周</span>' +
-          '<span class="trend-tab" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'month\',this)">月</span>' +
-          '<span class="trend-tab" onclick="loadTrend(\'' + escapeHtml(app.id) + '\',\'year\',this)">年</span>' +
+          '<span class="trend-tab active" onclick="loadTrend(\x27' + escapeHtml(app.id) + '\x27,\'week\',this)">周</span>' +
+          '<span class="trend-tab" onclick="loadTrend(\x27' + escapeHtml(app.id) + '\x27,\'month\',this)">月</span>' +
+          '<span class="trend-tab" onclick="loadTrend(\x27' + escapeHtml(app.id) + '\x27,\'year\',this)">年</span>' +
           '<span class="trend-loading" id="trend-load-' + escapeHtml(app.id) + '" style="display:none;margin-left:auto;font-size:10px;color:var(--mute);">加载中...</span>' +
         '</div>' +
         '<div class="trend-chart" id="trend-chart-' + escapeHtml(app.id) + '"></div>' +
@@ -139,7 +139,7 @@ function renderApps(apps) {
         '</div>' +
       '</div>' : '') +
       // 最近动态
-      '<div class=\"app-card-event\" onclick=\"toggleEvents(this,\\'' + escapeHtml(app.id) + '\\')\">' +
+      '<div class=\"app-card-event\" onclick=\"toggleEvents(this,\\x27' + escapeHtml(app.id) + '\\')\">' +
         '<div class=\"event-toggle\">' +
           '<span class=\"event-badge\" id=\"event-badge-' + escapeHtml(app.id) + '\">...</span>' +
           '<span class=\"material-symbols-rounded event-arrow\">expand_more</span>' +
@@ -152,8 +152,8 @@ function renderApps(apps) {
       '</div>' +
       (note ? '<div class="app-card-note"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;margin-right:4px;">sticky_note_2</span>' + escapeHtml(note) + '</div>' : '') +
       '<div class="app-card-actions">' +
-        '<button class="btn btn-icon" onclick="openEditModal(\'' + escapeHtml(app.id) + '\')"><span class="material-symbols-rounded">edit</span></button>' +
-        '<button class="btn btn-icon" onclick="deleteApp(\'' + escapeHtml(app.id) + '\')" style="color:var(--negative)"><span class="material-symbols-rounded">delete</span></button>' +
+        '<button class="btn btn-icon" onclick="openEditModal(\x27' + escapeHtml(app.id) + '\x27)"><span class="material-symbols-rounded">edit</span></button>' +
+        '<button class="btn btn-icon" onclick="deleteApp(\x27' + escapeHtml(app.id) + '\x27)" style="color:var(--negative)"><span class="material-symbols-rounded">delete</span></button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -278,7 +278,12 @@ async function doSearch() {
       '</div>';
     }).join('');
   } catch (e) {
-    resultsEl.innerHTML = '<div class="empty-state">搜索失败</div>';
+    // 检查是否是API未配置错误
+    if (e.message.includes('PLAY_API') || e.message.includes('未配置')) {
+      resultsEl.innerHTML = '<div class="empty-state"><div style="color:orange;">搜索功能需要配置Google Play API</div><div style="font-size:12px;margin-top:8px;">请设置PLAY_API环境变量</div></div>';
+    } else {
+      resultsEl.innerHTML = '<div class="empty-state">搜索失败: ' + e.message + '</div>';
+    }
   }
 }
 // ---- Detail Modal ----
@@ -558,7 +563,27 @@ async function loadDashboard() {
     const data = await api('/api/dashboard');
     renderApps(data.apps);
     renderHistory(data.history);
-  } catch (e) { showToast('加载失败: ' + e.message); }
+    
+    // 检查API是否配置正确
+    if (data.has_api === false) {
+      showToast('警告: Google Play API未配置，搜索功能不可用');
+    }
+    
+    // 更新JS测试状态
+    const jsTest = document.getElementById('jstest');
+    if (jsTest) jsTest.textContent = 'JS RUNNING - ' + (data.apps?.length || 0) + '应用';
+    if (jsTest) jsTest.style.background = 'green';
+  } catch (e) { 
+    showToast('加载失败: ' + e.message);
+    // 更新JS测试状态
+    const jsTest = document.getElementById('jstest');
+    if (jsTest) jsTest.textContent = 'JS ERROR: ' + e.message;
+    if (jsTest) jsTest.style.background = 'orange';
+    
+    // 显示空数据状态
+    renderApps([]);
+    renderHistory([]);
+  }
 }
 
 // ---- Init ----
@@ -574,27 +599,42 @@ document.addEventListener('click', function(e) {
   }
 });
 (async function init() {
-  await loadCountries();
-  // 加载背景
-  try {
-    const bg = await api('/api/bg');
-    if (bg.url) {
-      const el = document.getElementById('bgWallpaper');
-      if (el) el.style.backgroundImage = 'url(' + bg.url + ')';
-    }
-  } catch (_) {}
-  // 填充国家选择器
-  const addDiv = document.getElementById('addCountries');
-  const editDiv = document.getElementById('editCountries');
-  if (addDiv || editDiv) {
-    const html = Object.entries(countryNames).map(([code, name]) => {
-      return '<label class="country-checkbox-label" title="' + escapeHtml(name) + '">' +
-        '<input type="checkbox" class="country-checkbox" value="' + code + '"' + (code === 'us' ? ' checked' : '') + '>' +
-        '<span>' + escapeHtml(name) + '</span>' +
-      '</label>';
-    }).join('');
-    if (addDiv) addDiv.innerHTML = html;
-    if (editDiv) editDiv.innerHTML = html;
+  // 显示JS测试元素
+  const jsTest = document.getElementById('jstest');
+  if (jsTest) {
+    jsTest.style.display = 'block';
+    jsTest.textContent = '正在初始化...';
   }
-  loadDashboard();
+  
+  try {
+    await loadCountries();
+    // 加载背景
+    try {
+      const bg = await api('/api/bg');
+      if (bg.url) {
+        const el = document.getElementById('bgWallpaper');
+        if (el) el.style.backgroundImage = 'url(' + bg.url + ')';
+      }
+    } catch (_) {}
+    // 填充国家选择器
+    const addDiv = document.getElementById('addCountries');
+    const editDiv = document.getElementById('editCountries');
+    if (addDiv || editDiv) {
+      const html = Object.entries(countryNames).map(([code, name]) => {
+        return '<label class="country-checkbox-label" title="' + escapeHtml(name) + '">' +
+          '<input type="checkbox" class="country-checkbox" value="' + code + '"' + (code === 'us' ? ' checked' : '') + '>' +
+          '<span>' + escapeHtml(name) + '</span>' +
+        '</label>';
+      }).join('');
+      if (addDiv) addDiv.innerHTML = html;
+      if (editDiv) editDiv.innerHTML = html;
+    }
+    await loadDashboard();
+  } catch (e) {
+    if (jsTest) {
+      jsTest.textContent = '初始化失败: ' + e.message;
+      jsTest.style.background = 'red';
+    }
+    showToast('初始化错误: ' + e.message);
+  }
 })();

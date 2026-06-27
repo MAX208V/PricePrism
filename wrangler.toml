@@ -4,6 +4,11 @@ main = 'src/index.js'
 compatibility_date = "2024-02-20"
 keep_vars = true
 
+# 自定义域名
+routes = [
+  { pattern = "play.maxcloud.fun", custom_domain = true }
+]
+
 # D1 数据库（应用配置、价格走势、通知记录）
 [[d1_databases]]
 binding = "DB"

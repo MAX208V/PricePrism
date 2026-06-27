@@ -16,7 +16,7 @@ export async function handleDashboard(env) {
     apps = await getApps(DB);
     for (const app of apps) {
       app.countries = JSON.stringify(parseCountries(app));
-      app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+      app.icon_data = app.last_icon || '';
     }
     
     history = await getNotifications(DB, HISTORY_MAX);
@@ -58,7 +58,7 @@ export async function handleAppsApi(request, env) {
     const apps = await getApps(DB);
     for (const app of apps) {
       app.countries = JSON.stringify(parseCountries(app));
-      app.icon_data = await getCachedIcon(ICONS, app.id, app.last_icon);
+      app.icon_data = app.last_icon || '';
     }
     return jsonResponse(apps);
   }
@@ -137,7 +137,6 @@ export async function handleAppsApi(request, env) {
       fields.push("countries=?");
       values.push(JSON.stringify(body.countries));
     }
-    if (body.name) { fields.push("name=?"); values.push(body.name); }
     fields.push("updated_at=?");
     values.push(new Date().toISOString());
     values.push(body.app_id);
@@ -149,15 +148,45 @@ export async function handleAppsApi(request, env) {
   return jsonResponse({ error: "Method not allowed" }, 405);
 }
 
-// ── 搜索 ──
+// ── 图标服务 ──
+export async function handleIcon(request, env) {
+  const url = new URL(request.url);
+  const appId = url.searchParams.get("appId");
+  if (!appId) return new Response("Missing appId", { status: 400 });
+  const { ICONS } = env;
+  // 优先从 R2 读取缓存图标
+  if (ICONS) {
+    try {
+      const obj = await ICONS.get("icons/" + appId);
+      if (obj) {
+        const headers = new Headers();
+        obj.writeHttpMetadata(headers);
+        headers.set("Cache-Control", "public, max-age=86400");
+        return new Response(obj.body, { headers });
+      }
+    } catch (e) {}
+  }
+  // 回退到 Google Play 原始图标（从 app 记录中获取）
+  try {
+    const app = await env.DB.prepare("SELECT last_icon FROM apps WHERE id=?").bind(appId).first();
+    if (app?.last_icon) {
+      const resp = await fetch(app.last_icon, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (resp.ok) return new Response(resp.body, { headers: { "Cache-Control": "public, max-age=3600", "Content-Type": resp.headers.get("content-type") || "image/png" } });
+    }
+  } catch (e) {}
+  // 返回 1x1 透明 GIF 占位图
+  const gif = Uint8Array.from(atob("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"), c => c.charCodeAt(0));
+  return new Response(gif, { status: 200, headers: { "Content-Type": "image/gif", "Cache-Control": "public, max-age=300" } });
+}
 export async function handleSearch(request, env) {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
   if (!term) return jsonResponse({ error: "term required" }, 400);
   const playApi = env.PLAY_API;
   if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
+  const apiBase = playApi.startsWith('http') ? playApi : 'https://' + playApi;
   try {
-    const resp = await fetch(`${playApi}/api/apps/?q=${encodeURIComponent(term)}&country=us&lang=en`, { headers: { Accept: "application/json" } });
+    const resp = await fetch(`${apiBase}/api/apps/?q=${encodeURIComponent(term)}&country=us&lang=en`, { headers: { Accept: "application/json" } });
     if (!resp.ok) return jsonResponse({ error: `API error: ${resp.status}` }, 500);
     const data = await resp.json();
     const results = (data.results || []).map(app => ({
@@ -179,8 +208,9 @@ export async function handleAppDetail(request, env) {
   if (!appId) return jsonResponse({ error: "appId required" }, 400);
   const playApi = env.PLAY_API;
   if (!playApi) return jsonResponse({ error: "PLAY_API not configured" }, 400);
+  const apiBase = playApi.startsWith('http') ? playApi : 'https://' + playApi;
   try {
-    const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${url.searchParams.get('country') || 'us'}`, { headers: { Accept: "application/json" } });
+    const resp = await fetch(`${apiBase}/api/apps/${encodeURIComponent(appId)}?country=${url.searchParams.get('country') || 'us'}`, { headers: { Accept: "application/json" } });
     if (!resp.ok) return jsonResponse({ error: `API ${resp.status}` }, 500);
     const d = await resp.json();
     return jsonResponse({
@@ -198,6 +228,19 @@ export async function handleAppDetail(request, env) {
 export async function handleHistory(env) {
   const history = await getNotifications(env.DB, HISTORY_MAX);
   return jsonResponse(history);
+}
+
+export async function handleClearHistory(request, env) {
+  if (request.method === "DELETE") {
+    await env.DB.prepare("DELETE FROM notifications").run();
+    return jsonResponse({ ok: true });
+  }
+  if (request.method === "PATCH") {
+    // 标记全部已读（将 notified 设为 2 表示已读）
+    await env.DB.prepare("UPDATE notifications SET notified=2 WHERE notified=1").run();
+    return jsonResponse({ ok: true });
+  }
+  return jsonResponse({ error: "Method not allowed" }, 405);
 }
 
 // ── 价格走势 ──
@@ -228,30 +271,29 @@ export async function handleTrend(request, env) {
   });
 }
 
-// ── 应用最近动态(price_history事件) ──
+// ── 应用最近动态(通知记录) ──
 export async function handleAppEvents(request, env) {
   const url = new URL(request.url);
   const appId = url.searchParams.get("appId");
   if (!appId) return jsonResponse({ error: "appId required" }, 400);
   try {
-    // 取最近10条价格记录，检测变化
+    // 查询该应用的通知记录（含原始价格）
     const r = await env.DB.prepare(
-      "SELECT price, free, currency, price_text, recorded_at FROM price_history WHERE app_id=? ORDER BY recorded_at DESC LIMIT 10"
+      "SELECT n.*, a.base_price as original_price FROM notifications n LEFT JOIN apps a ON n.app_id = a.id WHERE n.app_id=? ORDER BY n.time DESC LIMIT 20"
     ).bind(appId).all();
     const records = r.results || [];
-    const events = [];
-    for (let i = 0; i < records.length - 1; i++) {
-      const cur = records[i];
-      const prev = records[i + 1];
-      if (cur.price !== prev.price || cur.free !== prev.free) {
-        events.push({
-          type: cur.free ? '变为免费' : (cur.price < prev.price ? '降价' : '涨价'),
-          old_price: prev.priceText || '$' + prev.price,
-          new_price: cur.priceText || '$' + cur.price,
-          time: cur.recorded_at
-        });
-      }
-    }
+    const events = records.map(n => {
+      const orig = n.original_price || n.price;
+      const diff = orig - n.price;
+      const pct = orig > 0 ? ((diff / orig) * 100).toFixed(1) : '0';
+      return {
+        type: diff > 0 ? '降价' : (diff < 0 ? '涨价' : '不变'),
+        old_price: '$' + orig,
+        new_price: '$' + n.price,
+        pct: pct,
+        time: n.time
+      };
+    });
     return jsonResponse({ ok: true, app_id: appId, events });
   } catch (e) { return jsonResponse({ error: e.message }, 500); }
 }

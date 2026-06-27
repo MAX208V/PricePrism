@@ -1,8 +1,8 @@
 // ==================== PricePrism — 入口 ====================
 import {
-  handleDashboard, handleAppsApi, handleCheck, handleHistory,
+  handleDashboard, handleAppsApi, handleCheck, handleHistory, handleClearHistory,
   handleSearch, handleAppDetail, handleCountries, handleBg,
-  handleTrend, handleMigrate, handleAppEvents
+  handleTrend, handleMigrate, handleAppEvents, handleIcon
 } from './handlers.js';
 import { monitorAndNotify } from './services.js';
 import { jsonResponse } from './utils.js';
@@ -27,6 +27,7 @@ export default {
       if (path === "/api/dashboard") return await handleDashboard(env);
       if (path === "/api/apps") return await handleAppsApi(request, env);
       if (path === "/api/check") return await handleCheck(env);
+      if (path === "/api/history" && (request.method === "DELETE" || request.method === "PATCH")) return await handleClearHistory(request, env);
       if (path === "/api/history") return await handleHistory(env);
       if (path === "/api/search") return await handleSearch(request, env);
       if (path === "/api/app-detail") return await handleAppDetail(request, env);
@@ -34,6 +35,7 @@ export default {
       if (path === "/api/bg") return await handleBg();
       if (path === "/api/trend") return await handleTrend(request, env);
       if (path === "/api/app-events") return await handleAppEvents(request, env);
+      if (path === "/api/icon") return await handleIcon(request, env);
       if (path === "/api/migrate") return await handleMigrate(env);
       if (path.startsWith("/api/")) return jsonResponse({ error: "Not found" }, 404);
 
@@ -41,7 +43,6 @@ export default {
       if (response.status === 404) {
         return env.ASSETS.fetch(new URL('/index.html', url.origin));
       }
-      // 添加缓存控制头
       const headers = new Headers(response.headers);
       headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       return new Response(response.body, {

@@ -6,8 +6,9 @@ import { DEFAULT_COUNTRY } from './utils.js';
 export async function fetchAppInfo(env, appId, country = DEFAULT_COUNTRY) {
   const playApi = env.PLAY_API;
   if (!playApi) return null;
+  const apiBase = playApi.startsWith('http') ? playApi : 'https://' + playApi;
   try {
-    const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${country}`, { headers: { Accept: "application/json" } });
+    const resp = await fetch(`${apiBase}/api/apps/${encodeURIComponent(appId)}?country=${country}`, { headers: { Accept: "application/json" } });
     if (!resp.ok) return null;
     const data = await resp.json();
     return {
@@ -21,7 +22,8 @@ export async function fetchAppInfo(env, appId, country = DEFAULT_COUNTRY) {
 
 export async function fetchAppPrice(playApi, appId, country, lang) {
   try {
-    const resp = await fetch(`${playApi}/api/apps/${encodeURIComponent(appId)}?country=${country}&lang=${lang}`, { headers: { Accept: "application/json" } });
+    const apiBase = playApi.startsWith('http') ? playApi : 'https://' + playApi;
+    const resp = await fetch(`${apiBase}/api/apps/${encodeURIComponent(appId)}?country=${country}&lang=${lang}`, { headers: { Accept: "application/json" } });
     if (!resp.ok) throw new Error(`API ${resp.status}`);
     const data = await resp.json();
     return {
@@ -81,7 +83,9 @@ export async function getApps(DB) {
 
 export async function getNotifications(DB, limit = 50) {
   try {
-    const r = await DB.prepare("SELECT * FROM notifications ORDER BY time DESC LIMIT ?").bind(limit).all();
+    const r = await DB.prepare(
+      "SELECT n.*, a.base_price as original_price FROM notifications n LEFT JOIN apps a ON n.app_id = a.id ORDER BY n.time DESC LIMIT ?"
+    ).bind(limit).all();
     return r.results || [];
   } catch (e) { return []; }
 }

@@ -78,20 +78,32 @@ export async function checkApp(app, env) {
     }
     if (price < effectiveThreshold) {
       const last = app.last_notified_price;
-      if (last !== undefined && last !== null && price < last) { notified = true; reason = "price_dropped"; }
+      if (last === null || last === undefined || price < last) { notified = true; reason = "price_dropped"; }
     }
   } else if (monitor_mode === "change") {
     const bp = app.base_price;
-    if (bp !== null && price !== bp) { notified = true; reason = "price_changed"; }
+    if (bp !== null && price < bp) {
+      const last = app.last_notified_price;
+      if (last === null || last === undefined || price < last) { notified = true; reason = "price_dropped"; }
+    }
   }
 
   // 发送通知
   if (notified) {
-    const title = name + (monitor_mode !== "change" ? " 降价啦！" : " 价格变动");
-    let desp = free ? "**状态: 免费**\n\n" : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
-    if (monitor_mode !== "change" && !free) {
-      if (app.threshold_type === 'percent') desp += `已低于百分比阈值 ${app.threshold_pct || 20}% (基准价 $${app.base_price})\n\n`;
-      else desp += `已低于阈值 $${threshold}\n\n`;
+    let title, desp;
+    if (monitor_mode === "change") {
+      const dropAmount = app.base_price - price;
+      const dropPercent = ((dropAmount / app.base_price) * 100).toFixed(1);
+      title = name + " 降价啦！";
+      desp = free ? "**状态: 免费**\n\n" : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
+      desp += `相比基准价 $${app.base_price} 下降了 **$${dropAmount.toFixed(2)} (${dropPercent}%)**\n\n`;
+    } else {
+      title = name + (free ? " 免费啦！" : " 降价啦！");
+      desp = free ? "**状态: 免费**\n\n" : `**价格: ${cur === 'USD' ? '$' : ''}${price} ${cur}**\n\n`;
+      if (!free) {
+        if (app.threshold_type === 'percent') desp += `已低于百分比阈值 ${app.threshold_pct || 20}% (基准价 $${app.base_price})\n\n`;
+        else desp += `已低于阈值 $${threshold}\n\n`;
+      }
     }
     desp += `- 应用ID: \`${id}\`\n`;
     if (note) desp += `- 备注: ${note}\n`;

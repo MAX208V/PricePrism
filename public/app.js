@@ -1,3 +1,4 @@
+// v1782034198
 let editingAppId = null;
 let detailData = null;
 let countryNames = {};
@@ -48,8 +49,22 @@ async function loadCountries() {
 function getCountryName(code) {
   return countryNames[code] || code.toUpperCase();
 }
+// 货币→美元汇率（近似值）
+const FX_RATES = { USD:1, JPY:0.0067, KRW:0.00072, HKD:0.128, TWD:0.031, CNY:0.14, GBP:1.27, EUR:1.09, CAD:0.73, AUD:0.67, BRL:0.18, RUB:0.011, INR:0.012, SGD:0.75, MYR:0.22, THB:0.028, IDR:0.000062, PHP:0.017, VND:0.000040, NOK:0.094, SEK:0.096, DKK:0.146, MXN:0.054, TRY:0.031, ZAR:0.055, AED:0.27, SAR:0.27 };
+function formatPrice(pc) {
+  if (!pc) return '';
+  if (pc.free) return '免费';
+  const local = pc.priceText || '$' + pc.price;
+  const rate = FX_RATES[pc.currency] || 0;
+  if (rate && pc.currency !== 'USD') {
+    const usdVal = (parseFloat(pc.price) * rate).toFixed(2);
+    return local + ' ($' + usdVal + ')';
+  }
+  return local;
+}
 // ---- 渲染监控卡 ----
 function renderApps(apps) {
+  window._apps = apps;
   const container = document.getElementById('appsList');
   const countEl = document.getElementById('appsCount');
   countEl.textContent = apps ? apps.length : 0;
@@ -71,6 +86,20 @@ function renderApps(apps) {
     const icon = app.icon_data || app.last_icon || '';
     const score = app.last_score_text || '';
     const note = app.note || '';
+
+    // 价格变动计算
+    let changeArrow = '', changePct = '', showOriginal = false, origPriceStr = '';
+    const priceNum = parseFloat(price);
+    if (!isFree && !isNaN(priceNum) && priceNum > 0) {
+      const bp = parseFloat(app.base_price);
+      if (bp !== null && bp > 0 && Math.abs(bp - priceNum) > 0.001) {
+        const diff = bp - priceNum;
+        changeArrow = diff > 0 ? '▼' : '▲';
+        changePct = (Math.abs(diff) / bp * 100).toFixed(1) + '%';
+        origPriceStr = '$' + bp.toFixed(2);
+        showOriginal = true;
+      }
+    }
     
     const appCountries = (() => {
     try { return typeof app.countries === 'string' ? JSON.parse(app.countries) : (app.countries || [app.country || 'us']); }
@@ -82,25 +111,23 @@ function renderApps(apps) {
 })();
     return sep + '<div class="app-card">' +
       '<div class="app-card-main">' +
-        (icon ? '<img src="' + escapeHtml(icon) + '" class="app-card-icon" onerror="this.style.display=\'none\'">' : '<div class="app-card-icon"></div>') +
+        (icon ? '<div class="app-card-icon"><img src="/api/icon?appId=' + encodeURIComponent(app.id) + '" class="app-card-icon-img" onerror="this.style.display=\'none\'" style="width:40px;height:40px;border-radius:10px;"></div>' : '<div class="app-card-icon"></div>') +
         '<div class="app-card-body">' +
           '<div class="app-card-name">' + escapeHtml(app.name) + '</div>' +
           '<div class="app-card-id">' + escapeHtml(app.id) + '</div>' +
           '<div class="app-card-meta">' +
             (score ? '<span>★ ' + escapeHtml(score) + '</span>' : '') +
             (isBelow ? '<span class="badge badge--success">低于阈值</span>' : '') +
-            (isChangeMode ? '<span class="badge badge--warning">变动监控</span>' : '') +
-            (app.base_price !== null && price !== undefined && price !== null && !isFree ? '<span class="badge ' + (price < app.base_price ? 'badge--success' : 'badge--info') + '">' +
-              (price < app.base_price ? '▼' : price > app.base_price ? '▲' : '') + '$' + Math.abs(price - app.base_price).toFixed(2) + '</span>' : '') +
-            
-            (appCountries.length > 1 ? '<span class="badge badge--primary">' + appCountries.length + '区域</span>' : '') +
-          '</div>' +
+                      '</div>' +
         '</div>' +
         '<div class="app-card-right">' +
-          '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\x27' + escapeHtml(app.id) + '\x27,this)" style="cursor:pointer;">' +
-            '<div class="app-card-price-value">' + priceInfo.text + '</div>' +
+          '<div class="app-card-price' + (isBelow ? ' success' : '') + '" onclick="toggleTrend(\\x27' + escapeHtml(app.id) + '\\x27,this)" style="cursor:pointer;">' +
+            (changeArrow ? '<div class="price-top"><span class="price-arrow">' + changeArrow + '</span><span class="price-pct">' + changePct + '</span> ' : '') +
+              '<span class="price-value">' + priceInfo.text + '</span>' +
+            (changeArrow ? '</div>' : '') +
+            (showOriginal ? '<div class="price-original">' + origPriceStr + '</div>' : '') +
           '</div>' +
-          '<div class="app-card-threshold">' + (isChangeMode ? '变动通知' : thresholdType === 'percent' ? '阈值 ' + thresholdPct + '%' : '阈值 $' + threshold) + '</div>' +
+          '<div class="app-card-threshold">' + (isChangeMode ? '降价通知' : thresholdType === 'percent' ? '阈值 ' + thresholdPct + '%' : '阈值 $' + threshold) + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="app-card-trend" id="trend-' + escapeHtml(app.id) + '" style="display:none;">' +
@@ -113,38 +140,40 @@ function renderApps(apps) {
         '<div class="trend-chart" id="trend-chart-' + escapeHtml(app.id) + '"></div>' +
       '</div>' +
       // 区域价格对比（可展开）
-      (appCountries.length > 1 || Object.keys(pricesByCountry).length > 0 ? '<div class="app-card-regions" onclick="toggleRegions(this)">' +
+      (appCountries.length > 1 ? '<div class="app-card-regions" onclick="toggleRegions(this)">' +
         '<div class="region-toggle">' +
           '<span class="material-symbols-rounded">language</span>' +
           '<span>价格对比 (' + (appCountries.length > 1 ? appCountries.length : Object.keys(pricesByCountry).length) + '区域)</span>' +
           '<span class="material-symbols-rounded region-arrow">expand_more</span>' +
-        '</div>' +
-        '<div class="region-detail">' +
-          Object.entries(pricesByCountry).length > 0
-            ? '<table class="region-table"><tbody>' +
-              appCountries.map(cc => {
-                const pc = pricesByCountry[cc];
-                if (!pc) return '';
-                const flagEmoji = getCountryName(cc).split(' ')[0] || '';
+        '</div>' +        '<div class="region-detail" id="rd-' + escapeHtml(app.id) + '" style="display:none;">' +
+          '<table class="region-table"><tbody>' +
+            appCountries.map(cc => {
+              const pc = pricesByCountry[cc];
+              const flagEmoji = getCountryName(cc).split(' ')[0] || '';
+              const name = getCountryName(cc).replace(/^[^\s]+\s/, '');
+              if (pc) {
                 return '<tr>' +
                   '<td class="region-flag">' + flagEmoji + '</td>' +
-                  '<td class="region-name">' + getCountryName(cc).replace(/^[^\s]+\s/, '') + '</td>' +
-                  '<td class="region-price' + (pc.free ? ' region-free' : '') + '">' + (pc.free ? '免费' : (pc.priceText || '$' + pc.price)) + '</td>' +
+                  '<td class="region-name">' + name + '</td>' +
+                  '<td class="region-price' + (pc.free ? ' region-free' : '') + '\">' + formatPrice(pc) + '</td>' +
                 '</tr>';
-              }).join('') +
-              '</tbody></table>'
-            : appCountries.map(cc => {
-              return '<div class="region-pending"><span>' + getCountryName(cc) + '</span><span class="mute">等待检查</span></div>';
+              }
+              return '<tr class="region-pending">' +
+                '<td class="region-flag">' + flagEmoji + '</td>' +
+                '<td class="region-name">' + name + '</td>' +
+                '<td class="region-price mute">等待检查</td>' +
+              '</tr>';
             }).join('') +
+          '</tbody></table>' +
         '</div>' +
       '</div>' : '') +
       // 最近动态
-      '<div class=\"app-card-event\" onclick=\"toggleEvents(this,\\x27' + escapeHtml(app.id) + '\\')\">' +
+      '<div class=\"app-card-event\" onclick=\"toggleEvents(this,\\x27' + escapeHtml(app.id) + '\x27)\">' +
         '<div class=\"event-toggle\">' +
-          '<span class=\"event-badge\" id=\"event-badge-' + escapeHtml(app.id) + '\">...</span>' +
+          '<span class=\"material-symbols-rounded\" style=\"font-size:16px;\">payments</span><span class=\"event-preview\" id=\"event-preview-' + escapeHtml(app.id) + '\"></span>' +
           '<span class=\"material-symbols-rounded event-arrow\">expand_more</span>' +
         '</div>' +
-        '<div class=\"event-detail\" id=\"event-detail-' + escapeHtml(app.id) + '\">' +
+        '<div class=\"event-detail\" id=\"event-detail-' + escapeHtml(app.id) + '\" style=\"display:none;\">' +
           '<div class=\"event-list\" id=\"event-list-' + escapeHtml(app.id) + '\">' +
             '<div class=\"loading\" style=\"padding:8px;\">加载中...</div>' +
           '</div>' +
@@ -162,12 +191,13 @@ function renderApps(apps) {
 }
 // ---- 区域展开 ----
 function toggleRegions(el) {
-  const detail = el.querySelector('.region-detail');
+  const appCard = el.closest('.app-card');
+  if (!appCard) return;
+  const detail = appCard.querySelector('.region-detail');
   const arrow = el.querySelector('.region-arrow');
   if (!detail) return;
-  const isOpen = detail.style.display === 'block';
-  detail.style.display = isOpen ? 'none' : 'block';
-  if (arrow) arrow.textContent = isOpen ? 'expand_more' : 'expand_less';
+  detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
+  if (arrow) arrow.textContent = detail.style.display === 'block' ? 'expand_less' : 'expand_more';
 }
 // ---- 最近动态 ----
 async function toggleEvents(headerEl, appId) {
@@ -185,71 +215,76 @@ async function toggleEvents(headerEl, appId) {
   }
 }
 
-// 自动加载每个应用的最近动态摘要（展开时再拉取完整数据，只设角标初始状态）
-// 注意：不会捏造数据，仅在用户点击展开时请求真实变动的API
+// 自动加载每个应用的最近通知预览
 async function loadEvents(appId) {
   const list = document.getElementById('event-list-' + appId);
-  const badge = document.getElementById('event-badge-' + appId);
+  const preview = document.getElementById('event-preview-' + appId);
   if (!list) return;
   try {
     const data = await api('/api/app-events?appId=' + encodeURIComponent(appId));
     if (!data.events || data.events.length === 0) {
-      list.innerHTML = '<div class="mute" style="padding:8px;font-size:11px;">暂未检测到价格变动</div>';
-      if (badge) { badge.style.display = 'none'; }
+      list.innerHTML = '<div class="mute" style="padding:12px;font-size:11px;text-align:center;color:var(--mute);">暂无变动记录</div>';
+      if (preview) preview.textContent = '';
       return;
     }
-    // 只显示真实变动事件
-    if (badge) {
-      badge.style.display = 'inline-flex';
-      badge.textContent = data.events.length + '次变动';
+    // 最新一条作为折叠栏预览
+    const ev = data.events[0];
+    const dt = new Date(ev.time);
+    const timeStr = formatTime(ev.time);
+    const arrow = ev.type === '降价' ? '▼' : ev.type === '涨价' ? '▲' : '';
+    if (preview) {
+      preview.textContent = timeStr + '  ' + arrow + ' ' + ev.pct + '%  ' + ev.new_price + '/' + ev.old_price;
     }
+    // 展开后的全部记录
     list.innerHTML = data.events.map((ev, idx) => {
       const dt = new Date(ev.time);
-      const timeStr = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-      let icon = 'trending_flat';
-      if (ev.type === '降价') icon = 'trending_down';
-      else if (ev.type === '涨价') icon = 'trending_up';
-      else if (ev.type === '变为免费') icon = 'money_off';
+      const timeStr = formatTime(ev.time);
+      const arrow = ev.type === '降价' ? '▼' : ev.type === '涨价' ? '▲' : '';
+      const pctInfo = ev.pct ? ' ' + ev.pct + '%' : '';
+      const typeClass = ev.type === '降价' ? 'down' : ev.type === '涨价' ? 'up' : '';
       return '<div class="event-item">' +
-        '<span class="material-symbols-rounded event-item-icon" style="color:' + (ev.type === '降价' ? 'var(--positive)' : ev.type === '涨价' ? 'var(--negative)' : 'var(--mute)') + '">' + icon + '</span>' +
-        '<div class="event-item-body">' +
-          '<div class="event-item-type">' +
-            (ev.type === '降价' ? '📉 降价' : ev.type === '涨价' ? '📈 涨价' : ev.type === '变为免费' ? '🎉 变为免费' : ev.type) +
-          '</div>' +
-          '<div class="event-item-price">' +
-            '<span class="old-price">' + ev.old_price + '</span>' +
-            ' <span style="color:var(--mute)">→</span> ' +
-            '<span class="new-price">' + ev.new_price + '</span>' +
-          '</div>' +
-          '<div class="event-item-time">' + timeStr + '</div>' +
-        '</div>' +
+        '<span class="event-item-time">' + timeStr + '</span>' +
+        '<span class="event-item-type ' + typeClass + '">' + arrow + pctInfo + '</span>' +
+        '<span class="event-item-prices"><span class="new-price">' + ev.new_price + '</span><span class="hp-sep">/</span><span class="old-price">' + ev.old_price + '</span></span>' +
       '</div>';
     }).join('');
   } catch (e) {
-    list.innerHTML = '<div class="mute" style="padding:8px;font-size:11px;">加载失败</div>';
-    badge.style.display = 'none';
+    list.innerHTML = '<div class="mute" style="padding:12px;font-size:11px;text-align:center;color:var(--mute);">加载失败</div>';
   }
 }
 // ---- History ----
 function renderHistory(history) {
   const container = document.getElementById('historyList');
   const countEl = document.getElementById('historyCount');
+  // 只计数未读通知（notified !== 2）
+  const unread = history ? history.filter(h => h.notified !== 2).length : 0;
   if (countEl) {
-    const len = history ? history.length : 0;
-    countEl.textContent = len > 0 ? len : '';
+    countEl.textContent = unread > 0 ? unread : '';
+    countEl.style.display = unread > 0 ? '' : 'none';
   }
-  // 从 localStorage 读取折叠状态（默认展开）
-  const shown = localStorage.getItem('notif_visible') !== 'false';
+  // 从 cookie 读取折叠状态（默认折叠）
+  const shown = getCookie('notif_visible') === 'true';
   if (container) container.style.display = shown ? '' : 'none';
   if (!history || history.length === 0) {
     if (container) container.innerHTML = '<div class="empty-state">暂无记录</div>';
     return;
   }
   container.innerHTML = history.map(h => {
-    return '<div class="history-item">' +
+    const isRead = h.notified === 2;
+    const curP = h.price || 0;
+    const origP = h.original_price || curP;
+    const diff = origP - curP;
+    let arrow = '';
+    let pctStr = '';
+    if (Math.abs(diff) > 0.001 && origP > 0) {
+      arrow = diff > 0 ? '▼' : '▲';
+      pctStr = (Math.abs(diff) / origP * 100).toFixed(1) + '%';
+    }
+    return '<div class="history-item' + (isRead ? ' history-item--read' : '') + '">' +
       '<span class="history-time">' + formatTime(h.time) + '</span>' +
-      '<span class="history-price">' + (h.price !== undefined ? '$' + h.price : '') + '</span>' +
-      '<span class="history-badge history-badge--' + (h.notified ? 'notified' : 'skipped') + '">' + (h.notified ? '已通知' : '跳过') + '</span>' +
+      '<span class="history-name">' + escapeHtml(h.name || '') + '</span>' +
+      (arrow ? '<span class="history-change ' + (arrow === '▼' ? 'down' : 'up') + '">' + arrow + ' ' + pctStr + '</span>' : '') +
+      '<span class="history-prices"><span class="hp-current">$' + curP.toFixed(2) + '</span><span class="hp-sep">/</span><span class="hp-original">$' + origP.toFixed(2) + '</span></span>' +
     '</div>';
   }).join('');
 }
@@ -428,13 +463,38 @@ async function checkPrices() {
     if (btn) btn.style.animation = '';
   }
 }
+// ---- 清空通知 ----
+async function clearHistory() {
+  if (!confirm('确认清空所有通知记录？')) return;
+  try {
+    await api('/api/history', { method: 'DELETE' });
+    showToast('已清空');
+    await loadDashboard();
+  } catch (e) { showToast(e.message); }
+}
+// ---- 全部标记已读 ----
+async function markAllRead() {
+  try {
+    await api('/api/history', { method: 'PATCH' });
+    showToast('已全部标记已读');
+    await loadDashboard();
+  } catch (e) { showToast(e.message); }
+}
 // ---- 添加表单折叠 ----
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+function setCookie(name, value, days) {
+  const expires = days ? '; max-age=' + (days * 86400) : '';
+  document.cookie = name + '=' + encodeURIComponent(value) + '; path=/' + expires;
+}
 function toggleNotifHistory() {
   const list = document.getElementById('historyList');
   if (!list) return;
   const shown = list.style.display !== 'none';
   list.style.display = shown ? 'none' : '';
-  localStorage.setItem('notif_visible', shown ? 'false' : 'true');
+  setCookie('notif_visible', shown ? 'false' : 'true', 365);
 }
 function toggleAddForm() {
   const form = document.getElementById('addForm');
@@ -560,7 +620,10 @@ async function deleteApp(id) {
 // ---- 主数据加载 ----
 async function loadDashboard() {
   try {
-    const data = await api('/api/dashboard');
+    // 优先使用 <head> 中提前发起的请求
+    const dashPromise = window.__dashPromise;
+    delete window.__dashPromise;
+    const data = dashPromise ? await dashPromise : await api('/api/dashboard');
     renderApps(data.apps);
     renderHistory(data.history);
     
@@ -569,16 +632,8 @@ async function loadDashboard() {
       showToast('警告: Google Play API未配置，搜索功能不可用');
     }
     
-    // 更新JS测试状态
-    const jsTest = document.getElementById('jstest');
-    if (jsTest) jsTest.textContent = 'JS RUNNING - ' + (data.apps?.length || 0) + '应用';
-    if (jsTest) jsTest.style.background = 'green';
   } catch (e) { 
     showToast('加载失败: ' + e.message);
-    // 更新JS测试状态
-    const jsTest = document.getElementById('jstest');
-    if (jsTest) jsTest.textContent = 'JS ERROR: ' + e.message;
-    if (jsTest) jsTest.style.background = 'orange';
     
     // 显示空数据状态
     renderApps([]);
@@ -599,13 +654,6 @@ document.addEventListener('click', function(e) {
   }
 });
 (async function init() {
-  // 显示JS测试元素
-  const jsTest = document.getElementById('jstest');
-  if (jsTest) {
-    jsTest.style.display = 'block';
-    jsTest.textContent = '正在初始化...';
-  }
-  
   try {
     await loadCountries();
     // 加载背景
@@ -631,10 +679,6 @@ document.addEventListener('click', function(e) {
     }
     await loadDashboard();
   } catch (e) {
-    if (jsTest) {
-      jsTest.textContent = '初始化失败: ' + e.message;
-      jsTest.style.background = 'red';
-    }
     showToast('初始化错误: ' + e.message);
   }
 })();

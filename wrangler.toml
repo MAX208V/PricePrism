@@ -4,11 +4,6 @@ main = 'src/index.js'
 compatibility_date = "2024-02-20"
 keep_vars = true
 
-# KV 存储（状态缓存层）
-[[kv_namespaces]]
-binding = "KV"
-id = "8b89d8b5c511457390f5aee4cce00570"
-
 # D1 数据库（应用配置、价格走势、通知记录）
 [[d1_databases]]
 binding = "DB"
@@ -20,9 +15,9 @@ database_id = "08dab003-cdff-4043-805d-4be32758c96e"
 binding = "ICONS"
 bucket_name = "priceprism-icons"
 
-# 定时触发器：每 1 小时执行（UTC）
+# 定时触发器：每 15 分钟执行（UTC）
 [triggers]
-crons = ["0 * * * *"]
+crons = ["*/15 * * * *"]
 
 # 静态资源
 [assets]
